@@ -18,7 +18,7 @@ class LoginTextfield extends StatelessWidget {
             controller: controller,
             obscureText: obsucreText,
             decoration: InputDecoration(
-                enabledBorder: OutlineInputBorder(
+                enabledBorder: const OutlineInputBorder(
                   borderSide: BorderSide(color: Colors.white),
                 ),
                 focusedBorder: OutlineInputBorder(
