@@ -9,12 +9,47 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  TextStyle _getTimeAndSubtitleStyle(String time, {required bool isCheckIn}) {
+    final timeParts = time.split(":");
+    final hour = int.tryParse(timeParts[0]) ?? 0;
+
+    if (isCheckIn) {
+      if (hour >= 9) {
+        return const TextStyle(color: Colors.red, fontWeight: FontWeight.bold);
+      }
+    } else {
+      if (hour < 17) {
+        return const TextStyle(color: Colors.red, fontWeight: FontWeight.bold);
+      }
+    }
+
+    return const TextStyle(color: Colors.black, fontWeight: FontWeight.normal);
+  }
+
+  String _getSubtitle(String time, {required bool isCheckIn}) {
+    final timeParts = time.split(":");
+    final hour = int.tryParse(timeParts[0]) ?? 0;
+
+    if (isCheckIn) {
+      if (hour >= 9) {
+        return "Check In Late";
+      }
+      return "On Time";
+    } else {
+      if (hour < 17) {
+        return "Early Check Out";
+      }
+      return "Go Home";
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        elevation: 0, // Remove shadow
+        elevation: 0,
         title: const Row(
           children: [
             CircleAvatar(
@@ -44,12 +79,6 @@ class _HomePageState extends State<HomePage> {
             )
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_outlined, color: Colors.black),
-          )
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -65,20 +94,74 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 12),
-            const Row(
-              children: [
-                AttendanceCard(
-                  title: "Check In",
-                  time: "10:20 am",
-                  subtitle: "On Time",
-                ),
-                SizedBox(width: 16),
-                AttendanceCard(
-                  title: "Check Out",
-                  time: "07:00 pm",
-                  subtitle: "Go Home",
-                ),
-              ],
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Provider.of<CameraProvider>(context, listen: false)
+                  .fetchActivities(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Error: ${snapshot.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {});
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No activities found.'));
+                }
+                final activities = snapshot.data!;
+                String clockInTime = "-";
+                String clockOutTime = "-";
+                final nowDate = DateTime.now().toString().substring(0, 10);
+                for (var activity in activities) {
+                  if (activity['activityType'] == 'Clock In' &&
+                      activity['date'] == nowDate) {
+                    clockInTime = activity['time'];
+                  } else if (activity['activityType'] == 'Clock Out' &&
+                      activity['date'] == nowDate) {
+                    clockOutTime = activity['time'];
+                  }
+                }
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        AttendanceCard(
+                          title: "Check In",
+                          time: clockInTime,
+                          subtitle: clockInTime == "-"
+                              ? "Not Checked In"
+                              : _getSubtitle(clockInTime, isCheckIn: true),
+                          timeStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
+                          subtitleStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
+                        ),
+                        const SizedBox(width: 16),
+                        AttendanceCard(
+                          title: "Check Out",
+                          time: clockOutTime,
+                          subtitle: clockOutTime == "-"
+                              ? "Not Checked Out"
+                              : _getSubtitle(clockOutTime, isCheckIn: false),
+                          timeStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
+                          subtitleStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 16),
             Row(
@@ -168,7 +251,6 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () {
-                              // Retry fetching activities
                               setState(() {});
                             },
                             child: const Text('Retry'),
@@ -207,11 +289,15 @@ class AttendanceCard extends StatelessWidget {
   final String title;
   final String time;
   final String subtitle;
+  final TextStyle? timeStyle;
+  final TextStyle? subtitleStyle;
 
   const AttendanceCard({
     required this.title,
     required this.time,
     required this.subtitle,
+    this.timeStyle,
+    this.subtitleStyle,
   });
 
   @override
@@ -221,7 +307,7 @@ class AttendanceCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: Colors.grey[200], // Add a background color
+          color: Colors.grey[200],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,12 +319,12 @@ class AttendanceCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               time,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: timeStyle ?? const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: const TextStyle(fontSize: 12),
+              style: subtitleStyle ?? const TextStyle(fontSize: 12),
             ),
           ],
         ),

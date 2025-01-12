@@ -15,21 +15,18 @@ class NaviBar extends StatelessWidget {
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.access_time,
-                color: Colors.green,
               ),
               label: 'Request',
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.home,
-                color: Colors.blue,
               ),
               label: 'Home',
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.person,
-                color: Colors.blue,
               ),
               label: 'Profile',
             ),
@@ -37,7 +34,6 @@ class NaviBar extends StatelessWidget {
           currentIndex: selectedIndex,
           onTap: onItemTapped,
           selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.blue.withOpacity(0.6),
           iconSize: 30.0,
           selectedFontSize: 14.0,
           unselectedFontSize: 12.0,

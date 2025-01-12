@@ -84,12 +84,6 @@ class _CameraPageState extends State<CameraPage> {
                   try {
                     await _initializeControllerFuture;
                     final image = await _controller!.takePicture();
-
-                    final now = DateTime.now();
-                    final formattedDate = "${now.month}/${now.day}/${now.year}";
-                    final formattedTime =
-                        "${now.hour}:${now.minute} ${now.hour < 12 ? 'AM' : 'PM'}";
-
                     await Provider.of<CameraProvider>(context, listen: false)
                         .uploadImage(File(image.path), widget.activityType);
                     Navigator.pop(context);

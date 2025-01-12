@@ -59,11 +59,13 @@ class CameraProvider with ChangeNotifier {
               final uploadedAt = doc['uploadedAt']?.toDate() ?? DateTime.now();
               final date = uploadedAt.toLocal().toString().substring(0, 10);
               final time = uploadedAt.toLocal().toString().substring(11, 16);
+              final activityType = doc['activityType'];
 
               return {
                 'url': doc['url'],
                 'date': date,
                 'time': time,
+                'activityType': activityType,
               };
             }).toList());
   }
