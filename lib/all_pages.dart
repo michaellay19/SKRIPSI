@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:skripsi/components/nav_bar.dart';
-import 'package:skripsi/pages/request_page.dart';
 import 'package:skripsi/pages/home_page.dart';
 import 'package:skripsi/pages/profile_page.dart';
+import 'package:skripsi/pages/request_page.dart';
 
 class AllPages extends StatefulWidget {
   const AllPages({super.key});
