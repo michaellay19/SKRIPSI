@@ -51,34 +51,10 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _navigateToMyProfile() {
+  void _navigateToPage(Widget page) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const MyProfilePage(),
-      ),
-    );
-  }
-
-  void _navigateToSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const SettingsPage(),
-      ),
-    );
-  }
-
-  void _navigateToTermsAndConditions() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const TermsAndConditionsPage(),
-      ),
-    );
-  }
-
-  void _navigateToPrivacyPolicy() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const PrivacyPolicyPage(),
+        builder: (context) => page,
       ),
     );
   }
@@ -89,7 +65,7 @@ class _ProfilePageState extends State<ProfilePage> {
       appBar: AppBar(
         title: const Text('Profile'),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.blue,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -126,12 +102,25 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 30),
               _buildMenuOption(
-                  Icons.person, 'My Profile', _navigateToMyProfile),
-              _buildMenuOption(Icons.settings, 'Settings', _navigateToSettings),
-              _buildMenuOption(Icons.article, 'Terms & Conditions',
-                  _navigateToTermsAndConditions),
-              _buildMenuOption(Icons.privacy_tip, 'Privacy Policy',
-                  _navigateToPrivacyPolicy),
+                Icons.person,
+                'My Profile',
+                () => _navigateToPage(const MyProfilePage()),
+              ),
+              _buildMenuOption(
+                Icons.settings,
+                'Settings',
+                () => _navigateToPage(const SettingsPage()),
+              ),
+              _buildMenuOption(
+                Icons.article,
+                'Terms & Conditions',
+                () => _navigateToPage(const TermsAndConditionsPage()),
+              ),
+              _buildMenuOption(
+                Icons.privacy_tip,
+                'Privacy Policy',
+                () => _navigateToPage(const PrivacyPolicyPage()),
+              ),
               const SizedBox(height: 20),
               GestureDetector(
                 onTap: _logout,
@@ -141,7 +130,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Icon(Icons.logout, color: Colors.red),
                     SizedBox(width: 10),
                     Text(
-                      'Log Out',
+                      'Log out',
                       style: TextStyle(color: Colors.red, fontSize: 16),
                     ),
                   ],
@@ -155,10 +144,14 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildMenuOption(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.blue),
-      title: Text(title, style: const TextStyle(fontSize: 16)),
-      onTap: onTap,
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.blue),
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        onTap: onTap,
+      ),
     );
   }
 }
@@ -254,8 +247,24 @@ class MyProfilePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Profile'),
       ),
-      body: Center(
-        child: const Text('My Profile Page'),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Name:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            const Text('Michael Mitc'),
+            const SizedBox(height: 10),
+            const Text(
+              'Role:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            const Text('Lead UI/UX Designer'),
+          ],
+        ),
       ),
     );
   }
@@ -270,8 +279,22 @@ class SettingsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Settings'),
       ),
-      body: Center(
-        child: const Text('Settings Page'),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Settings Option 1',
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Settings Option 2',
+              style: TextStyle(fontSize: 18),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -286,8 +309,12 @@ class TermsAndConditionsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Terms & Conditions'),
       ),
-      body: Center(
-        child: const Text('Terms & Conditions Page'),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: const Text(
+          'By using this application, you agree to the following terms and conditions. These include respecting intellectual property rights, refraining from unauthorized access, and adhering to local laws and regulations.',
+          style: TextStyle(fontSize: 16),
+        ),
       ),
     );
   }
@@ -302,8 +329,12 @@ class PrivacyPolicyPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Privacy Policy'),
       ),
-      body: Center(
-        child: const Text('Privacy Policy Page'),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: const Text(
+          'We are committed to protecting your privacy. This policy outlines how your personal information is collected, used, and shared when using our application.',
+          style: TextStyle(fontSize: 16),
+        ),
       ),
     );
   }
