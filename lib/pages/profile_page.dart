@@ -141,7 +141,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     Icon(Icons.logout, color: Colors.red),
                     SizedBox(width: 10),
                     Text(
-                      'Log out',
+                      'Log Out',
                       style: TextStyle(color: Colors.red, fontSize: 16),
                     ),
                   ],
