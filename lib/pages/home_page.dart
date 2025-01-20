@@ -1,9 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/provider/camera_provider.dart';
 import 'package:skripsi/pages/camera_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -43,41 +47,83 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundImage: AssetImage('images/profile.jpeg'),
-            ),
-            SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Michael Mitc",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+        title: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc('uid')
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundImage:
+                        snapshot.data!['profileImage'].startsWith('http')
+                            ? NetworkImage(snapshot.data!['profileImage'])
+                            : FileImage(File(snapshot.data!['profileImage'])),
                   ),
-                ),
-                Text(
-                  "Lead UI/UX Designer",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        snapshot.data!['name'] ?? 'Unknown',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      Text(
+                        snapshot.data!['role'] ?? '-',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            )
-          ],
+                ],
+              );
+            } else {
+              return const Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundImage: AssetImage('images/profile.jpeg'),
+                  ),
+                  SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Unknown',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      Text(
+                        '-',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            }
+          },
         ),
       ),
       body: Padding(
@@ -144,8 +190,10 @@ class _HomePageState extends State<HomePage> {
                           subtitle: clockInTime == "-"
                               ? "Not Checked In"
                               : _getSubtitle(clockInTime, isCheckIn: true),
-                          timeStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
-                          subtitleStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
+                          timeStyle: _getTimeAndSubtitleStyle(clockInTime,
+                              isCheckIn: true),
+                          subtitleStyle: _getTimeAndSubtitleStyle(clockInTime,
+                              isCheckIn: true),
                         ),
                         const SizedBox(width: 16),
                         AttendanceCard(
@@ -154,8 +202,10 @@ class _HomePageState extends State<HomePage> {
                           subtitle: clockOutTime == "-"
                               ? "Not Checked Out"
                               : _getSubtitle(clockOutTime, isCheckIn: false),
-                          timeStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
-                          subtitleStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
+                          timeStyle: _getTimeAndSubtitleStyle(clockOutTime,
+                              isCheckIn: false),
+                          subtitleStyle: _getTimeAndSubtitleStyle(clockOutTime,
+                              isCheckIn: false),
                         ),
                       ],
                     ),
@@ -319,7 +369,8 @@ class AttendanceCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               time,
-              style: timeStyle ?? const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: timeStyle ??
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(

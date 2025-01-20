@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/pages/login_page.dart';
 import 'package:skripsi/provider/auth_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileModel {
   String name;
@@ -23,11 +26,28 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  ProfileModel _profileModel = ProfileModel(
-    name: 'Michael Mitc',
-    role: 'Lead UI/UX Designer',
-    profileImage: 'images/profile.jpeg',
-  );
+  String _name = 'Unknown';
+  String _role = '-';
+  String _profileImage = '';
+  final _firestore = FirebaseFirestore.instance;
+  final _uid = 'uid'; // ganti dengan uid pengguna
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  void _loadProfile() async {
+    final doc = await _firestore.collection('users').doc(_uid).get();
+    if (doc.exists) {
+      setState(() {
+        _name = doc.get('name') ?? 'Unknown';
+        _role = doc.get('role') ?? '-';
+        _profileImage = doc.get('profileImage') ?? '';
+      });
+    }
+  }
 
   void _logout() async {
     await Provider.of<MyAuthProvider>(context, listen: false).signOut();
@@ -40,10 +60,16 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => EditProfilePage(
-          profileModel: _profileModel,
+          profileModel: ProfileModel(
+            name: _name,
+            role: _role,
+            profileImage: _profileImage,
+          ),
           onProfileUpdate: (updatedProfileModel) {
             setState(() {
-              _profileModel = updatedProfileModel;
+              _name = updatedProfileModel.name;
+              _role = updatedProfileModel.role;
+              _profileImage = updatedProfileModel.profileImage;
             });
           },
         ),
@@ -101,16 +127,20 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 20),
               CircleAvatar(
                 radius: 50,
-                backgroundImage: AssetImage(_profileModel.profileImage),
+                backgroundImage: _profileImage.isEmpty
+                    ? const AssetImage('images/profile.jpeg')
+                    : _profileImage.startsWith('http')
+                        ? NetworkImage(_profileImage)
+                        : FileImage(File(_profileImage)),
               ),
               const SizedBox(height: 10),
               Text(
-                _profileModel.name,
+                _name,
                 style:
                     const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               Text(
-                _profileModel.role,
+                _role,
                 style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 20),
@@ -125,8 +155,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: const Text('Edit Profile'),
               ),
               const SizedBox(height: 30),
-              _buildMenuOption(
-                  Icons.person, 'My Profile', _navigateToMyProfile),
+              _buildMenuOption(Icons.person, 'My Profile', _navigateToMyProfile),
               _buildMenuOption(Icons.settings, 'Settings', _navigateToSettings),
               _buildMenuOption(Icons.article, 'Terms & Conditions',
                   _navigateToTermsAndConditions),
@@ -135,7 +164,7 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 20),
               GestureDetector(
                 onTap: _logout,
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
                     Icon(Icons.logout, color: Colors.red),
@@ -179,6 +208,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _roleController = TextEditingController();
+  File? _profileImage;
 
   @override
   void initState() {
@@ -187,16 +217,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _roleController.text = widget.profileModel.role;
   }
 
-  void _updateProfile() {
+  void _updateProfile() async {
     if (_formKey.currentState!.validate()) {
+      final _firestore = FirebaseFirestore.instance;
+      final _uid = 'uid'; // ganti dengan uid pengguna
+      await _firestore.collection('users').doc(_uid).set({
+        'name': _nameController.text,
+        'role': _roleController.text,
+        'profileImage': _profileImage != null
+            ? _profileImage!.path
+            : widget.profileModel.profileImage,
+      });
       widget.onProfileUpdate(
         ProfileModel(
           name: _nameController.text,
           role: _roleController.text,
-          profileImage: widget.profileModel.profileImage,
+          profileImage: _profileImage != null
+              ? _profileImage!.path
+              : widget.profileModel.profileImage,
         ),
       );
       Navigator.of(context).pop();
+    }
+  }
+
+  void _selectImage() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _profileImage = File(image.path);
+      });
     }
   }
 
@@ -212,6 +263,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
           key: _formKey,
           child: Column(
             children: [
+              CircleAvatar(
+                radius: 50,
+                backgroundImage: _profileImage != null
+                    ? FileImage(_profileImage!)
+                    : widget.profileModel.profileImage.isEmpty
+                        ? const AssetImage('images/profile.jpeg')
+                        : widget.profileModel.profileImage.startsWith('http')
+                            ? NetworkImage(widget.profileModel.profileImage)
+                            : FileImage(File(widget.profileModel.profileImage)),
+              ),
+              SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _selectImage,
+                child: Text('Pilih Gambar Profil'),
+              ),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Name'),
@@ -232,10 +298,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _updateProfile,
-                child: const Text('Update Profile'),
+                child: Text('Update Profile'),
               ),
             ],
           ),
@@ -254,7 +320,7 @@ class MyProfilePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Profile'),
       ),
-      body: Center(
+      body: const Center(
         child: const Text('My Profile Page'),
       ),
     );
@@ -270,8 +336,8 @@ class SettingsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Settings'),
       ),
-      body: Center(
-        child: const Text('Settings Page'),
+      body: const Center(
+        child: Text('Settings Page'),
       ),
     );
   }
@@ -286,8 +352,8 @@ class TermsAndConditionsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Terms & Conditions'),
       ),
-      body: Center(
-        child: const Text('Terms & Conditions Page'),
+      body: const Center(
+        child: Text('Terms & Conditions Page'),
       ),
     );
   }
@@ -302,8 +368,8 @@ class PrivacyPolicyPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Privacy Policy'),
       ),
-      body: Center(
-        child: const Text('Privacy Policy Page'),
+      body: const Center(
+        child: Text('Privacy Policy Page'),
       ),
     );
   }
