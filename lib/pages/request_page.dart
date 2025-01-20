@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 
 class LeaveRequest {
-  final String title;
   final String leaveType;
-  final String contactNumber;
   final DateTime startDate;
   final DateTime endDate;
   final String reason;
 
   LeaveRequest({
-    required this.title,
     required this.leaveType,
-    required this.contactNumber,
     required this.startDate,
     required this.endDate,
     required this.reason,
@@ -27,8 +23,6 @@ class RequestPage extends StatefulWidget {
 
 class _RequestPageState extends State<RequestPage> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _contactNumberController = TextEditingController();
   final _reasonController = TextEditingController();
   String _selectedLeaveType = 'Medical Leave';
   DateTime? _startDate;
@@ -67,17 +61,13 @@ class _RequestPageState extends State<RequestPage> {
 
       setState(() {
         _leaveRequests.add(LeaveRequest(
-          title: _titleController.text,
           leaveType: _selectedLeaveType,
-          contactNumber: _contactNumberController.text,
           startDate: _startDate!,
           endDate: _endDate!,
           reason: _reasonController.text,
         ));
       });
 
-      _titleController.clear();
-      _contactNumberController.clear();
       _reasonController.clear();
       _startDate = null;
       _endDate = null;
@@ -92,6 +82,13 @@ class _RequestPageState extends State<RequestPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  void _cancelLeaveRequest(int index) {
+    setState(() {
+      _leaveRequests.removeAt(index);
+    });
+    _showSnackBar('Leave request canceled successfully.');
   }
 
   @override
@@ -111,17 +108,21 @@ class _RequestPageState extends State<RequestPage> {
               itemBuilder: (context, index) {
                 final request = _leaveRequests[index];
                 return ListTile(
-                  title: Text(request.title),
+                  title: Text(request.leaveType),
                   subtitle: Text(
-                      '${request.leaveType} - ${request.startDate.year}-${request.startDate.month}-${request.startDate.day} to ${request.endDate.year}-${request.endDate.month}-${request.endDate.day}'),
+                      '${request.startDate.year}-${request.startDate.month}-${request.startDate.day} to ${request.endDate.year}-${request.endDate.month}-${request.endDate.day}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.cancel, color: Colors.red),
+                    onPressed: () {
+                      _cancelLeaveRequest(index);
+                    },
+                  ),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => LeaveDetailsPage(
-                          title: request.title,
                           leaveType: request.leaveType,
-                          contactNumber: request.contactNumber,
                           startDate: request.startDate,
                           endDate: request.endDate,
                           reason: request.reason,
@@ -167,21 +168,23 @@ class _RequestPageState extends State<RequestPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  _buildTextField('Title', _titleController),
-                  const SizedBox(height: 16),
                   _buildDropdown('Leave Type', _selectedLeaveType, (value) {
                     setState(() {
                       _selectedLeaveType = value!;
                     });
                   }),
                   const SizedBox(height: 16),
-                  _buildTextField('Contact Number', _contactNumberController,
-                      keyboardType: TextInputType.phone),
+                  _buildDateField(
+                    'Start Date',
+                    _startDate,
+                    () => _pickDate(true),
+                  ),
                   const SizedBox(height: 16),
                   _buildDateField(
-                      'Start Date', _startDate, () => _pickDate(true)),
-                  const SizedBox(height: 16),
-                  _buildDateField('End Date', _endDate, () => _pickDate(false)),
+                    'End Date',
+                    _endDate,
+                    () => _pickDate(false),
+                  ),
                   const SizedBox(height: 16),
                   _buildTextField('Reason for Leave', _reasonController,
                       maxLines: 3),
@@ -261,19 +264,29 @@ class _RequestPageState extends State<RequestPage> {
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 5),
-        InkWell(
+        GestureDetector(
           onTap: onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
+              border: Border.all(color: Colors.blue),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text(
-              date != null
-                  ? '${date.year}-${date.month}-${date.day}'
-                  : 'Select Date',
-              style: const TextStyle(color: Colors.black54),
+            child: Row(
+              children: [
+                Text(
+                  date != null
+                      ? '${date.year}-${date.month}-${date.day}'
+                      : 'Select Date',
+                  style: TextStyle(
+                      color: date == null ? Colors.black54 : Colors.black),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.calendar_today,
+                  color: Colors.blue,
+                ),
+              ],
             ),
           ),
         ),
@@ -283,18 +296,14 @@ class _RequestPageState extends State<RequestPage> {
 }
 
 class LeaveDetailsPage extends StatelessWidget {
-  final String title;
   final String leaveType;
-  final String contactNumber;
   final DateTime startDate;
   final DateTime endDate;
   final String reason;
 
   const LeaveDetailsPage({
     Key? key,
-    required this.title,
     required this.leaveType,
-    required this.contactNumber,
     required this.startDate,
     required this.endDate,
     required this.reason,
@@ -319,9 +328,7 @@ class LeaveDetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetailRow('Title', title),
             _buildDetailRow('Leave Type', leaveType),
-            _buildDetailRow('Contact Number', contactNumber),
             _buildDetailRow('Start Date',
                 '${startDate.year}-${startDate.month}-${startDate.day}'),
             _buildDetailRow(

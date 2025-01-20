@@ -114,70 +114,64 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.blue,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 20),
-              CircleAvatar(
-                radius: 50,
-                backgroundImage: _profileImage.isEmpty
-                    ? const AssetImage('images/profile.jpeg')
-                    : _profileImage.startsWith('http')
-                        ? NetworkImage(_profileImage)
-                        : FileImage(File(_profileImage)),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: _profileImage.isEmpty
+                  ? const AssetImage('images/profile.jpeg')
+                  : _profileImage.startsWith('http')
+                      ? NetworkImage(_profileImage)
+                      : FileImage(File(_profileImage)),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _name,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              _role,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _editProfile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                _name,
-                style:
-                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                _role,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _editProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              child: const Text('Edit Profile'),
+            ),
+            const SizedBox(height: 30),
+            _buildMenuOption(Icons.person, 'My Profile', _navigateToMyProfile),
+            _buildMenuOption(Icons.settings, 'Settings', _navigateToSettings),
+            _buildMenuOption(Icons.article, 'Terms & Conditions',
+                _navigateToTermsAndConditions),
+            _buildMenuOption(Icons.privacy_tip, 'Privacy Policy',
+                _navigateToPrivacyPolicy),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: _logout,
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.logout, color: Colors.red),
+                  SizedBox(width: 10),
+                  Text(
+                    'Log out',
+                    style: TextStyle(color: Colors.red, fontSize: 16),
                   ),
-                ),
-                child: const Text('Edit Profile'),
+                ],
               ),
-              const SizedBox(height: 30),
-              _buildMenuOption(Icons.person, 'My Profile', _navigateToMyProfile),
-              _buildMenuOption(Icons.settings, 'Settings', _navigateToSettings),
-              _buildMenuOption(Icons.article, 'Terms & Conditions',
-                  _navigateToTermsAndConditions),
-              _buildMenuOption(Icons.privacy_tip, 'Privacy Policy',
-                  _navigateToPrivacyPolicy),
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: _logout,
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.logout, color: Colors.red),
-                    SizedBox(width: 10),
-                    Text(
-                      'Log out',
-                      style: TextStyle(color: Colors.red, fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -256,6 +250,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
+        backgroundColor: Colors.blue,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
