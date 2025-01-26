@@ -57,7 +57,7 @@ class CameraProvider with ChangeNotifier {
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
               final uploadedAt = doc['uploadedAt']?.toDate() ?? DateTime.now();
-              final date = uploadedAt.toLocal().toString().substring(0, 10);
+              final date = '${uploadedAt.day.toString().padLeft(2, '0')}-${uploadedAt.month.toString().padLeft(2, '0')}-${uploadedAt.year}';
               final time = uploadedAt.toLocal().toString().substring(11, 16);
               final activityType = doc['activityType'];
 

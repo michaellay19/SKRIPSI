@@ -4,7 +4,7 @@ class NaviBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
 
-  NaviBar({required this.selectedIndex, required this.onItemTapped});
+  const NaviBar({super.key, required this.selectedIndex, required this.onItemTapped});
 
   @override
   Widget build(BuildContext context) {

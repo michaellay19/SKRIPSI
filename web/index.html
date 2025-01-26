@@ -29,10 +29,25 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>skripsi</title>
+  <title>Skripsi</title>
   <link rel="manifest" href="manifest.json">
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC49Z8bJ9rZi8E1wRq38fQo-_fq71ivBAE",
+      authDomain: "amitofochat.firebaseapp.com",
+      projectId: "amitofochat",
+      storageBucket: "amitofochat.appspot.com",
+      messagingSenderId: "420716583804",
+      appId: "1:420716583804:web:4cedd74dce44df8404a2f9",
+      measurementId: "G-8QGWCRNJWY"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </head>
 <body>
+  <script src="main.dart.js" type="application/javascript"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
