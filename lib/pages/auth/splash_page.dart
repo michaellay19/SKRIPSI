@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:skripsi/pages/auth/login_page.dart';
 import 'package:skripsi/pages/users/all_users_pages.dart';
+import 'package:skripsi/pages/admin/admin_home_page.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -21,7 +22,7 @@ class SplashScreen extends StatelessWidget {
           );
         } else {
           final user = snapshot.data;
-          return user == null ? const LoginPage() : const AllPages();
+          return user == null ? const LoginPage() : const AdminLandingPage();
         }
       },
     );
