@@ -1,7 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:skripsi/pages/auth/login_page.dart';
+import 'package:skripsi/provider/auth_provider.dart';
 
-class AdminLandingPage extends StatelessWidget {
+class AdminLandingPage extends StatefulWidget {
   const AdminLandingPage({super.key});
+
+  @override
+  State<AdminLandingPage> createState() => _AdminLandingPageState();
+}
+
+class _AdminLandingPageState extends State<AdminLandingPage> {
+  void _logout() async {
+    await Provider.of<MyAuthProvider>(context, listen: false).signOut();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,15 +30,15 @@ class AdminLandingPage extends StatelessWidget {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            UserAccountsDrawerHeader(
-              accountName: const Text("Admin"),
-              accountEmail: const Text("admin@example.com"),
+            const UserAccountsDrawerHeader(
+              accountName: Text("Admin"),
+              accountEmail: Text("admin@example.com"),
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
                 child: Icon(Icons.admin_panel_settings,
                     size: 40, color: Colors.blueAccent),
               ),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.blueAccent,
               ),
             ),
@@ -145,9 +160,7 @@ class AdminLandingPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacementNamed(
-                  context, '/login'); // Implementasikan login route
+              _logout();
             },
             child: const Text("Logout"),
           ),

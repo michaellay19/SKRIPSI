@@ -1,9 +1,19 @@
+import 'dart:async';
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-import '../../../provider/camera_provider.dart';
+import 'package:skripsi/model/facenet_model.dart';
+import 'package:skripsi/model/facepainter_model.dart';
+import 'package:skripsi/pages/users/home/home_page.dart';
+import 'package:skripsi/provider/camera_provider.dart';
 
 class CameraPage extends StatefulWidget {
   final String activityType;
@@ -17,36 +27,179 @@ class CameraPage extends StatefulWidget {
 class CameraPageState extends State<CameraPage> {
   CameraController? _controller;
   Future<void>? _initializeControllerFuture;
+  FaceNetModel faceNet = FaceNetModel();
+  late FaceDetector _faceDetector;
+  bool isDetecting = false;
+  List<Face> detectedFaces = [];
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
-    requestCameraPermission().then((granted) {
-      if (granted) {
-        availableCameras().then((cameras) {
-          if (cameras.isNotEmpty) {
-            _controller = CameraController(
-              cameras[0],
-              ResolutionPreset.high,
-            );
-            _initializeControllerFuture = _controller!.initialize();
+    _faceDetector = FaceDetector(options: FaceDetectorOptions(enableTracking: true, performanceMode: FaceDetectorMode.accurate));
+    _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    bool granted = await requestCameraPermission();
+    if (!granted) return;
+
+    final cameras = await availableCameras();
+    for (var camera in cameras) {
+      if (camera.lensDirection == CameraLensDirection.front) {
+        _controller = CameraController(
+          camera,
+          ResolutionPreset.high,
+          enableAudio: false,
+        );
+        _initializeControllerFuture = _controller!.initialize().then((_) {
+          if (mounted) {
             setState(() {});
-          } else {
-            print('No cameras available');
+            _controller!.stopImageStream();
+            _startFaceDetection();
           }
-        }).catchError((e) {
-          print('Error accessing cameras: $e');
         });
-      } else {
-        print('Camera permission denied');
+        break;
       }
+    }
+  }
+
+  Future<void> _startFaceDetection() async {
+    if (_controller == null || isDetecting) return;
+    isDetecting = true;
+
+    _controller!.startImageStream((CameraImage image) async {
+      if (!mounted || _controller == null) return;
+
+      if (_debounceTimer?.isActive ?? false) return;
+        _debounceTimer = Timer(const Duration(milliseconds: 1000), () async {
+    
+        final WriteBuffer allBytes = WriteBuffer();
+        for (Plane plane in image.planes) {
+          allBytes.putUint8List(plane.bytes);
+        }
+        final bytes = allBytes.done().buffer.asUint8List();
+
+        final InputImage inputImage = InputImage.fromBytes(
+          bytes: bytes,
+          metadata: InputImageMetadata(
+            size: Size(image.width.toDouble(), image.height.toDouble()),
+            rotation: InputImageRotation.rotation270deg,
+            format: InputImageFormat.nv21,
+            bytesPerRow: image.planes[0].bytesPerRow,
+          ),
+        );
+
+        final faces = await _faceDetector.processImage(inputImage);
+
+        print("Processing image...");
+        print("Detected faces: ${faces.length}");
+
+
+        if (faces.isNotEmpty) {
+          Face firstFace = faces[0];
+
+          print("Detected face at ${firstFace.boundingBox}");
+        } else {
+          print("No face detected.");
+        }
+
+        if (mounted) {
+          setState(() {
+            detectedFaces = faces;
+          });
+        }
+      });
     });
   }
 
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
+  void _captureAndDetectFace() async {
+    if (detectedFaces.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No face detected. Try again!")),
+      );
+      return;
+    }
+
+    try {
+      await _initializeControllerFuture;
+      await _controller!.stopImageStream();
+      final image = await _controller!.takePicture();
+      final imageFile = File(image.path);
+
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      if (widget.activityType == 'Face Register') {
+        await saveFaceData(imageFile, currentUser);
+      } else {
+        bool isVerified = await faceNet.verifyFace(imageFile);
+        if (isVerified) {
+          await Provider.of<CameraProvider>(context, listen: false)
+              .uploadImage(imageFile, widget.activityType);
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Face not recognized. Try again!")),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error capturing face: $e');
+    }
+  }
+
+  Future<void> saveFaceData(File imageFile, User currentUser) async {
+    setState(() {
+      isDetecting = true;
+    });
+
+    List<double> embeddings = faceNet.runFaceNet(imageFile);
+    final storageRef = FirebaseStorage.instance
+        .ref()
+        .child('users/${currentUser.uid}/face/${currentUser.uid}.jpg');
+
+    await storageRef.putFile(imageFile);
+    final downloadUrl = await storageRef.getDownloadURL();
+
+    await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
+      'faceImage': downloadUrl,
+      'faceEmbeddings': embeddings,
+    }, SetOptions(merge: true));
+
+    setState(() {
+      isDetecting = false;
+    });
+
+    print("Profile image captured and saved!");
+    print("embeddings : ${embeddings}");
+
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+  }
+
+  void processImage(File image) async {
+    img.Image? fullImage = img.decodeImage(image.readAsBytesSync());
+    if (fullImage == null || detectedFaces.isEmpty) return;
+
+    final bool isFrontCamera = _controller!.description.lensDirection == CameraLensDirection.front;
+    if (isFrontCamera) {
+      fullImage = img.flipHorizontal(fullImage);
+      print("Image flipped for front camera correction.");
+    }
+
+    Face face = detectedFaces[0];
+    img.Image croppedFace = img.copyCrop(
+      fullImage,
+      x: face.boundingBox.left.toInt(),
+      y: face.boundingBox.top.toInt(),
+      width: face.boundingBox.width.toInt(),
+      height: face.boundingBox.height.toInt(),
+    );
+
+    File croppedFile = await faceNet.convertImageToFile(croppedFace, '${image.path}_cropped.jpg');
+
+    List<double> embeddings = faceNet.runFaceNet(croppedFile);
+    print("Cropped Face Embeddings: $embeddings");
   }
 
   Future<bool> requestCameraPermission() async {
@@ -56,6 +209,14 @@ class CameraPageState extends State<CameraPage> {
       status = await Permission.camera.status;
     }
     return status.isGranted;
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    _faceDetector.close();
+    isDetecting = false;
+    super.dispose();
   }
 
   @override
@@ -75,22 +236,29 @@ class CameraPageState extends State<CameraPage> {
               }
             },
           ),
+          if (detectedFaces.isNotEmpty)
+            Positioned.fill(
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                child: CustomPaint(
+                  painter: FacePainter(
+                    detectedFaces,
+                    Size(
+                      _controller!.value.previewSize!.height,
+                      _controller!.value.previewSize!.width,
+                    ),
+                    isFrontCamera: true,
+                  ),
+                ),
+              ),
+            ),
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 20.0),
               child: FloatingActionButton(
-                onPressed: () async {
-                  try {
-                    await _initializeControllerFuture;
-                    final image = await _controller!.takePicture();
-                    await Provider.of<CameraProvider>(context, listen: false)
-                        .uploadImage(File(image.path), widget.activityType);
-                    Navigator.pop(context);
-                  } catch (e) {
-                    print('Error: $e');
-                  }
-                },
+                onPressed: _captureAndDetectFace,
                 child: const Icon(Icons.camera),
               ),
             ),
@@ -100,3 +268,4 @@ class CameraPageState extends State<CameraPage> {
     );
   }
 }
+

@@ -47,7 +47,7 @@ class RequestPage extends StatelessWidget {
                     return ListTile(
                       title: Text(request.leaveType),
                       subtitle: Text(
-                          '${request.startDate.toFormattedString()} to ${request.endDate.toFormattedString()}'),
+                          '${request.startDate.toString().substring(0, 10)} to ${request.endDate.toString().substring(0, 10)}'),
                       trailing: IconButton(
                         icon: const Icon(Icons.cancel, color: Colors.red),
                         onPressed: () {

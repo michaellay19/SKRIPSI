@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:skripsi/model/leave_request_model.dart';
 
 class LeaveDetailsPage extends StatelessWidget {
   final String leaveType;
@@ -34,8 +33,8 @@ class LeaveDetailsPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow('Leave Type', leaveType),
-            _buildDetailRow('Start Date', startDate.toFormattedString()),
-            _buildDetailRow('End Date', endDate.toFormattedString()),
+            _buildDetailRow('Start Date', startDate.toString().substring(0, 10)),
+            _buildDetailRow('End Date', endDate.toString().substring(0, 10)),
             _buildDetailRow('Reason', reason),
           ],
         ),

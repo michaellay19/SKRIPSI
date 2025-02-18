@@ -12,31 +12,32 @@ class ProfileProvider with ChangeNotifier {
   String _name = '';
   String _role = '';
   String _profileImage = '';
+  String _faceImage = '';
 
   String get name => _name;
   String get role => _role;
   String get profileImage => _profileImage;
+  String get faceImage => _faceImage;
 
   Future<void> loadProfile() async {
     try {
       final User? currentUser  = _auth.currentUser ;
-      if (currentUser == null) {
-        throw Exception("User  not authenticated");
-      }
+      if (currentUser == null) throw Exception("User  not authenticated");
+      
+      final doc = await _firestore.collection('users').doc(currentUser.uid).get();
 
-      final doc = await _firestore
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
+      if (doc.exists && doc.data() != null){
+        final data = doc.data() as Map<String, dynamic>; 
 
-      if (doc.exists){
-        _name = doc.get('name');
-        _role = doc.get('role');
-        _profileImage = doc.get('profileImage');
+        _name = data.containsKey('name') ? data['name'] as String : "Unknown";
+        _role = data.containsKey('role') ? data['role'] as String : "-";
+        _profileImage = data.containsKey('profileImage') ? data['profileImage'] as String : "";
+        _faceImage = data.containsKey('faceImage') ? data['faceImage'] as String : "";
       } else {
         _name = "Unknown";
         _role = "-";
         _profileImage = '';
+        _faceImage = '';
       }
 
       notifyListeners();
@@ -49,9 +50,7 @@ class ProfileProvider with ChangeNotifier {
   Future<void> updateProfile(String name, String role, File? profileImage) async {
     try {
       final User? currentUser  = _auth.currentUser;
-      if (currentUser  == null) {
-        throw Exception("User  not authenticated");
-      }
+      if (currentUser  == null) throw Exception("User  not authenticated");
 
       _name = name;
       _role = role;

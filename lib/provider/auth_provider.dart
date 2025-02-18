@@ -1,19 +1,30 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:skripsi/pages/admin/admin_home_page.dart';
 import 'package:skripsi/pages/users/all_users_pages.dart';
 
 class MyAuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? _user;
+  final String _adminEmail = "admin@gmail.com";
 
   MyAuthProvider() {
-    _auth.authStateChanges().listen((User ? user) {
+    _auth.authStateChanges().listen((User ? user) async {
       _user = user;
       notifyListeners();
+
+      if (user != null) {
+        await _saveUserLocally(user.email!);
+      }
     });
+
+    _loadUserFromLocal();
   }
   
   User? get user => _user;
+  String get adminEmail => _adminEmail;
 
   Future<void> signIn(String email, String password, BuildContext context) async {
     showDialog(
@@ -28,12 +39,25 @@ class MyAuthProvider with ChangeNotifier {
         password: password.trim(),
       );
 
-      Navigator.pop(context);
-
       if (userCredential.user != null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const AllPages()),
-        );
+        _user = userCredential.user; 
+        notifyListeners();
+        
+        await _saveUserLocally(email.trim());
+
+        Navigator.pop(context);
+
+        if (email.trim().toLowerCase() == _adminEmail && kIsWeb) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const AdminLandingPage()),
+          );
+        } else if (email.trim().toLowerCase() != _adminEmail  && !kIsWeb) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const AllPages()),
+          );
+        } else {
+          _showSnackBar(context, 'Login failed. Please try again.');
+        }
       } else {
         _showSnackBar(context, 'Login failed. Please try again.');
       }
@@ -46,7 +70,32 @@ class MyAuthProvider with ChangeNotifier {
 
   Future<void> signOut() async {
     await _auth.signOut();
+    await _clearLocalUser();
     notifyListeners();
+  }
+
+  Future<void> _saveUserLocally(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('savedUserEmail', email);
+  }
+
+  Future<void> _loadUserFromLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? email = prefs.getString('savedUserEmail');
+
+    if (email != null) {
+      try {
+        _user = _auth.currentUser;
+        notifyListeners();
+      } catch (e) {
+        print("Error auto-login: $e");
+      }
+    }
+  }
+
+  Future<void> _clearLocalUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('savedUserEmail');
   }
 
   String _getErrorMessage(FirebaseAuthException e) {

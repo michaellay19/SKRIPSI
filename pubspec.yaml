@@ -19,6 +19,11 @@ dependencies:
     provider: ^6.1.2
     image_picker: ^1.1.2
     flutter_form_builder: ^9.5.0
+    image: ^4.5.2
+    tflite_flutter: ^0.11.0
+    google_mlkit_face_detection: ^0.12.0
+    path_provider: ^2.1.5
+    shared_preferences: ^2.5.2
 
 dev_dependencies:
     flutter_test:
@@ -30,3 +35,4 @@ flutter:
 
     assets:
         - images/
+        - assets/

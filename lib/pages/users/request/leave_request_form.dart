@@ -36,17 +36,8 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
     }
   }
 
-  void _submitForm() {
+  void _onsubmit() {
     if (_formKey.currentState!.validate()) {
-      if (_startDate == null || _endDate == null) {
-        _showSnackBar('Please select both start and end dates.');
-        return;
-      }
-      if (_startDate!.isAfter(_endDate!)) {
-        _showSnackBar('End date must be after start date.');
-        return;
-      }
-
       widget.onSubmit(
         LeaveRequest(
           id: '',
@@ -57,13 +48,8 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
           isApproved: false,
         ),
       );
-
       Navigator.of(context).pop();
     }
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -81,7 +67,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
                 });
               }),
               const SizedBox(height: 16),
-              _buildDateField('Start Date', _startDate, () => _pickDate(true)),
+              _buildDateField('Start Date', _startDate, () => _pickDate(true), isStartDate: true),
               const SizedBox(height: 16),
               _buildDateField('End Date', _endDate, () => _pickDate(false)),
               const SizedBox(height: 16),
@@ -96,7 +82,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
           child: const Text('Cancel'),
         ),
         TextButton(
-          onPressed: _submitForm,
+          onPressed: _onsubmit,
           child: const Text('Submit'),
         ),
       ],
@@ -148,37 +134,64 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
     );
   }
 
-  Widget _buildDateField(String label, DateTime? date, VoidCallback onTap) {
+  Widget _buildDateField(String label, DateTime? date, VoidCallback onTap, {bool isStartDate = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 5),
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.blue),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
+        FormField<DateTime>(
+          validator: (value) {
+            if (date == null) {
+              return 'Please select a date.';
+            }
+            if (!isStartDate && _startDate != null && _startDate!.isAfter(date)) {
+              return 'End date must be after start date.';
+            }
+            return null;
+          },
+          builder: (state) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  date != null 
-                    ? date.toFormattedString()
-                    : 'Select Date',
-                  style: TextStyle(
-                      color: date == null ? Colors.black54 : Colors.black),
+                GestureDetector(
+                  onTap: onTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.blue),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          date != null
+                              ? '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}'
+                              : 'Select Date',
+                          style: TextStyle(
+                            color: date == null ? Colors.black54 : Colors.black,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Icon(
+                          Icons.calendar_today,
+                          color: Colors.blue,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const Spacer(),
-                const Icon(
-                  Icons.calendar_today,
-                  color: Colors.blue,
-                ),
+                if (state.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      state.errorText ?? '',
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
-            ),
-          ),
+            );
+          },
         ),
       ],
     );

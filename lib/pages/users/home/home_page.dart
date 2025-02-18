@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/model/activity_tile_model.dart';
 import 'package:skripsi/model/attendance_card_model.dart';
+import 'package:skripsi/model/leave_request_model.dart';
 import 'package:skripsi/pages/users/home/camera_page.dart';
 import 'package:skripsi/provider/camera_provider.dart';
 import 'package:skripsi/provider/profile_provider.dart';
@@ -17,13 +19,32 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _checkUserFaceData();
+  }
+
+  void _checkUserFaceData() async {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    profileProvider.loadProfile();
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    await profileProvider.loadProfile();
+
+    if (profileProvider.faceImage.isEmpty) {
+      Future.microtask(() {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const CameraPage(activityType: 'Face Register'),
+          ),
+        );
+      });
+    }
   }
 
   TextStyle _getTimeAndSubtitleStyle(String time, {required bool isCheckIn}) {
     final hour = int.tryParse(time.split(":").first) ?? 0;
-
+    
     if (((isCheckIn && hour >= 9) || (!isCheckIn && hour < 17) && time != "-")) {
       return const TextStyle(color: Colors.red, fontWeight: FontWeight.bold);
     }
@@ -121,7 +142,7 @@ class _HomePageState extends State<HomePage> {
                 }
 
                 final activities = snapshot.data ?? [];
-                final nowDate = DateTime.now().toString().substring(0, 10);
+                final nowDate = DateTime.now().toFormattedString();
 
                 final clockInActivity = activities.firstWhere(
                   (activity) => activity['activityType'] == 'Clock In' && activity['date'] == nowDate,

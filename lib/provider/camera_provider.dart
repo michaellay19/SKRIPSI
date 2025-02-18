@@ -26,7 +26,7 @@ class CameraProvider with ChangeNotifier {
 
       Map<String, dynamic> imageData = {
         'url': downloadUrl,
-        'uploadedAt': FieldValue.serverTimestamp(),
+        'uploadedAt': DateTime.now().toString(),
         'userEmail': currentUser.email,
         'activityType': activityType,
       };
@@ -56,9 +56,11 @@ class CameraProvider with ChangeNotifier {
         .orderBy('uploadedAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
-              final uploadedAt = doc['uploadedAt']?.toDate() ?? DateTime.now();
-              final date = '${uploadedAt.day.toString().padLeft(2, '0')}-${uploadedAt.month.toString().padLeft(2, '0')}-${uploadedAt.year}';
-              final time = uploadedAt.toLocal().toString().substring(11, 16);
+              final uploadedAt = doc['uploadedAt'];
+              final temp = uploadedAt.substring(0, 10);
+              List<String> parts = temp.split('-');
+              final date = '${parts[2]}-${parts[1]}-${parts[0]}';
+              final time = uploadedAt.substring(11, 16);
               final activityType = doc['activityType'];
 
               return {
