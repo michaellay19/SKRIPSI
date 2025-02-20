@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Attendance App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.teal),
+      theme: ThemeData(primarySwatch: Colors.cyan),
       home: const SplashScreen(),
     );
   }

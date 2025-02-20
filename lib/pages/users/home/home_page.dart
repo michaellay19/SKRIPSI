@@ -80,9 +80,13 @@ class _HomePageState extends State<HomePage> {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundImage: profileImage.isEmpty
-                  ? const AssetImage('images/profile.jpeg')
-                  : NetworkImage(profileImage) as ImageProvider,
+              backgroundImage: profileProvider.profileImage.isNotEmpty
+                  ? NetworkImage(profileImage)
+                  : null,
+              child: profileProvider.profileImage.isEmpty
+                  ? const Icon(Icons.admin_panel_settings,
+                      size: 40, color: Colors.blueAccent)
+                  : null,
             ),
             const SizedBox(width: 12),
             Column(

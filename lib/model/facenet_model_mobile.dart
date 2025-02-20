@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 
@@ -19,6 +19,7 @@ class FaceNetModel {
     _interpreter = await Interpreter.fromAsset('assets/facenet_model.tflite');
     _inputShape = _interpreter.getInputTensor(0).shape;
     _outputShape = _interpreter.getOutputTensor(0).shape;
+    print("TFLite model loaded!");
   }
 
   List<double> runFaceNet(File imageFile) {
@@ -52,7 +53,7 @@ class FaceNetModel {
     double similarity = cosineSimilarity(storedEmbeddingsList, newEmbeddings);
     print("Face similarity score: $similarity");
 
-    return similarity > 0.6;
+    return similarity > 0.8;
   }
 
   double cosineSimilarity(List<double> a, List<double> b) {

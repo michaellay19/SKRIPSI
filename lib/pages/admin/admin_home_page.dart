@@ -1,57 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:skripsi/pages/auth/login_page.dart';
-import 'package:skripsi/provider/auth_provider.dart';
+import 'package:skripsi/pages/admin/user_manager_page.dart';
 
-class AdminLandingPage extends StatefulWidget {
-  const AdminLandingPage({super.key});
+class AdminHomePage extends StatefulWidget {
+  const AdminHomePage({super.key});
 
   @override
-  State<AdminLandingPage> createState() => _AdminLandingPageState();
+  State<AdminHomePage> createState() => _AdminHomePageState();
 }
 
-class _AdminLandingPageState extends State<AdminLandingPage> {
-  void _logout() async {
-    await Provider.of<MyAuthProvider>(context, listen: false).signOut();
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-    );
-  }
-
+class _AdminHomePageState extends State<AdminHomePage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Admin Dashboard"),
-        backgroundColor: Colors.blueAccent,
-        centerTitle: true,
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const UserAccountsDrawerHeader(
-              accountName: Text("Admin"),
-              accountEmail: Text("admin@example.com"),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.admin_panel_settings,
-                    size: 40, color: Colors.blueAccent),
-              ),
-              decoration: BoxDecoration(
-                color: Colors.blueAccent,
-              ),
-            ),
-            _buildDrawerItem(context, 'Dashboard', Icons.dashboard, () {}),
-            _buildDrawerItem(context, 'Users', Icons.people, () {}),
-            _buildDrawerItem(context, 'Settings', Icons.settings, () {}),
-            _buildDrawerItem(context, 'Logout', Icons.logout, () {
-              _showLogoutDialog(context);
-            }),
-          ],
-        ),
-      ),
-      body: SafeArea(
+    return SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -76,13 +36,37 @@ class _AdminLandingPageState extends State<AdminLandingPage> {
                       mainAxisSpacing: 12,
                       children: [
                         _buildCard(
-                            "Total Users", "150", Icons.people, Colors.green),
-                        _buildCard("Active Sessions", "75",
-                            Icons.online_prediction, Colors.orange),
-                        _buildCard(
-                            "Pending Requests", "5", Icons.pending, Colors.red),
-                        _buildCard("Settings", "Manage", Icons.settings,
-                            Colors.blueGrey),
+                        title: "Total Users",
+                        value: "150",
+                        icon: Icons.people,
+                        color: Colors.green,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const UserManagerPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildCard(
+                        title: "Active Sessions",
+                        value: "75",
+                        icon: Icons.online_prediction,
+                        color: Colors.orange,
+                      ),
+                      _buildCard(
+                        title: "Pending Requests",
+                        value: "5",
+                        icon: Icons.pending,
+                        color: Colors.red,
+                      ),
+                      _buildCard(
+                        title: "Location",
+                        value: "Geofencing",
+                        icon: Icons.map,
+                        color: Colors.brown,
+                      ),
                       ],
                     );
                   },
@@ -91,80 +75,53 @@ class _AdminLandingPageState extends State<AdminLandingPage> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
-  Widget _buildDrawerItem(
-      BuildContext context, String title, IconData icon, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.blueAccent),
-      title: Text(title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-      onTap: () {
-        Navigator.pop(context);
-        onTap();
-      },
-    );
-  }
-
-  Widget _buildCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: color),
-            const SizedBox(height: 8),
-            Flexible(
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+  Widget _buildCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: color),
+              const SizedBox(height: 8),
+              Flexible(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: color,
+              const SizedBox(height: 5),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Logout"),
-        content: const Text("Are you sure you want to logout?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              _logout();
-            },
-            child: const Text("Logout"),
-          ),
-        ],
       ),
     );
   }

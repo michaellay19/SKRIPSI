@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:skripsi/pages/admin/admin_home_page.dart';
+import 'package:skripsi/pages/admin/all_admin_pages.dart';
 import 'package:skripsi/pages/users/all_users_pages.dart';
 
 class MyAuthProvider with ChangeNotifier {
@@ -49,7 +49,7 @@ class MyAuthProvider with ChangeNotifier {
 
         if (email.trim().toLowerCase() == _adminEmail && kIsWeb) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const AdminLandingPage()),
+            MaterialPageRoute(builder: (context) => const AllAdminPage()),
           );
         } else if (email.trim().toLowerCase() != _adminEmail  && !kIsWeb) {
           Navigator.of(context).pushReplacement(

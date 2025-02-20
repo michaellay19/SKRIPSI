@@ -83,9 +83,13 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             CircleAvatar(
               radius: 50,
-              backgroundImage: profileProvider.profileImage.isEmpty
-                ? const AssetImage('images/profile.jpeg')
-                : NetworkImage(profileProvider.profileImage) as ImageProvider,
+              backgroundImage: profileProvider.profileImage.isNotEmpty
+                ? NetworkImage(profileProvider.profileImage)
+                : null,
+              child: profileProvider.profileImage.isEmpty
+                ? const Icon(Icons.admin_panel_settings,
+                    size: 40, color: Colors.blueAccent)
+                : null,
             ),
             const SizedBox(height: 10),
             Text(
