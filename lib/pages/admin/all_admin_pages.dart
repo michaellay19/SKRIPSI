@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:skripsi/pages/admin/admin_attendance_list_page.dart';
 import 'package:skripsi/pages/admin/admin_home_page.dart';
 import 'package:skripsi/pages/admin/admin_setting_page.dart';
+import 'package:skripsi/pages/admin/admin_location_page.dart';
+import 'package:skripsi/pages/admin/admin_employee_list_page.dart';
+import 'package:skripsi/pages/admin/admin_request_time_off_page.dart';
+import 'package:skripsi/pages/admin/admin_attendance_report_page.dart';
 import 'package:skripsi/pages/auth/login_page.dart';
 import 'package:skripsi/provider/auth_provider.dart';
 import 'package:skripsi/provider/profile_provider.dart';
@@ -19,11 +24,21 @@ class _AllAdminPageState extends State<AllAdminPage> {
   final List<Widget> _pages = [
     const AdminHomePage(),
     const AdminSettingPage(),
+    const AdminAttendanceListPage(),
+    const AdminLocationPage(),
+    const AdminEmployeeListPage(),
+    AdminRequestTimeOffPage(),
+    const AdminAttendanceReportPage()
   ];
 
   final List<String> _pageTitles = [
     "Dashboard",
     "Settings",
+    "Attendance List",
+    "Location",
+    "Employee List",
+    "Request Time Off List",
+    "Attendance Report"
   ];
 
   @override
@@ -47,7 +62,7 @@ class _AllAdminPageState extends State<AllAdminPage> {
       MaterialPageRoute(builder: (context) => const LoginPage()),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,65 +71,77 @@ class _AllAdminPageState extends State<AllAdminPage> {
         title: Text(_pageTitles[_selectedIndex]),
         centerTitle: true,
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            Consumer<ProfileProvider>(
-              builder: (context, profileProvider, child) {
-                return DrawerHeader(
-                  decoration: const BoxDecoration(color: Colors.cyan),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: Colors.white,
-                        radius: 30,
-                        backgroundImage: profileProvider.profileImage.isNotEmpty
-                            ? NetworkImage(profileProvider.profileImage)
-                            : null,
-                        child: profileProvider.profileImage.isEmpty
-                            ? const Icon(Icons.admin_panel_settings,
-                                size: 40, color: Colors.cyan)
-                            : null,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        profileProvider.name.isNotEmpty
-                            ? profileProvider.name
-                            : "Loading...",
-                        style: const TextStyle(color: Colors.white, fontSize: 18),
-                      ),
-                      Text(
-                        profileProvider.role.isNotEmpty
-                            ? profileProvider.role
-                            : "-",
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            _buildDrawerItem("Dashboard", Icons.dashboard, 0),
-            _buildDrawerItem("Settings", Icons.settings, 1),
-            _buildDrawerItem("Logout", Icons.logout, -1),
-          ],
-        ),
-      ),
+      drawer: _buildDrawer(),
       body: _pages[_selectedIndex],
     );
   }
 
-  Widget _buildDrawerItem(String title, IconData icon, int index) {
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          Consumer<ProfileProvider>(
+            builder: (context, profileProvider, child) {
+              return DrawerHeader(
+                decoration: const BoxDecoration(color: Colors.cyan),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.white,
+                      radius: 30,
+                      backgroundImage: profileProvider.profileImage.isNotEmpty
+                          ? NetworkImage(profileProvider.profileImage)
+                          : null,
+                      child: profileProvider.profileImage.isEmpty
+                          ? const Icon(Icons.admin_panel_settings,
+                              size: 40, color: Colors.cyan)
+                          : null,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      profileProvider.name.isNotEmpty
+                          ? profileProvider.name
+                          : "Loading...",
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                    Text(
+                      profileProvider.role.isNotEmpty
+                          ? profileProvider.role
+                          : "-",
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          _buildDrawerItem(Icons.dashboard, "Dashboard", 0),
+          _buildDrawerItem(Icons.list, "Attendance List", 2),
+          _buildDrawerItem(Icons.people, "Employee List", 4),
+          _buildDrawerItem(Icons.approval, "Request Time Off List", 5),
+          const Divider(),
+          _buildDrawerItem(Icons.map, "Location", 3),
+          _buildDrawerItem(Icons.report, "Attendance Report", 6),
+          const Divider(),
+          _buildDrawerItem(Icons.settings, "Settings", 1),
+          _buildDrawerItem(Icons.logout, "Logout", -1),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(IconData icon, String title, int index) {
     return ListTile(
       leading: Icon(icon, color: Colors.cyan),
       title: Text(title, style: const TextStyle(fontSize: 16)),
-      selected: _selectedIndex == index && index != -1,
+      selected: _selectedIndex == index && index >= 0,
       onTap: () {
         if (index == -1) {
           _showLogoutDialog();
-        } else {
+        } else if (index >= 0) {
           _onDrawerItemTapped(index);
         }
       },
@@ -133,9 +160,7 @@ class _AllAdminPageState extends State<AllAdminPage> {
             child: const Text("Cancel"),
           ),
           TextButton(
-            onPressed: () {
-              _logout();
-            },
+            onPressed: _logout,
             child: const Text("Logout"),
           ),
         ],
