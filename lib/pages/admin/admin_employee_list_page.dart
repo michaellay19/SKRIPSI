@@ -81,7 +81,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
               onPressed: () {
                 setState(() {
                   if (isEditing) {
-                    employee!.addAll(controllers.map(
+                    employee.addAll(controllers.map(
                         (key, controller) => MapEntry(key, controller.text)));
                   } else {
                     employees.add({

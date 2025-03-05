@@ -29,7 +29,7 @@ class SplashScreen extends StatelessWidget {
         }
 
         String? savedEmail = snapshot.data?.toLowerCase();
-        
+
         if (savedEmail != null) {
           if (savedEmail == myAuth.adminEmail && kIsWeb) {
             return const AllAdminPage();

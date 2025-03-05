@@ -32,9 +32,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.white],
+              colors: [Colors.white, Colors.grey],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
+              tileMode: TileMode.clamp,
             ),
           ),
         ),
@@ -53,8 +54,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 ),
                 const SizedBox(width: 6),
                 IconButton(
-                  icon: const Icon(Icons.calendar_today,
-                      color: Colors.black, size: 22),
+                  icon: const Icon(Icons.calendar_today, color: Colors.black, size: 22),
                   onPressed: () => _selectDate(context),
                 ),
               ],

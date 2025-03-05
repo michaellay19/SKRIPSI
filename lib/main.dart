@@ -16,7 +16,7 @@ void main() async {
             apiKey: "AIzaSyC49Z8bJ9rZi8E1wRq38fQo-_fq71ivBAE",
             authDomain: "amitofochat.firebaseapp.com",
             projectId: "amitofochat",
-            storageBucket: "amitofochat",
+            storageBucket: "amitofochat.appspot.com",
             messagingSenderId: "420716583804",
             appId: "1:420716583804:web:4cedd74dce44df8404a2f9",
             measurementId: "G-8QGWCRNJWY",

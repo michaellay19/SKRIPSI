@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:skripsi/constants/app_colors.dart';
 
 class ForgetPasswordPage extends StatefulWidget {
   const ForgetPasswordPage({super.key});
@@ -43,7 +44,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue[700],
+      backgroundColor: AppColors.primary,
       body: SafeArea(
         child: Center(
           child: Column(
@@ -54,7 +55,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.text1,
                 ),
               ),
               const SizedBox(height: 8),
@@ -64,7 +65,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                   "Enter your email address to receive a password reset link.",
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.white70,
+                    color: AppColors.background1,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -75,7 +76,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.text1,
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Column(
@@ -88,8 +89,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 15),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 15),
                         ),
                         keyboardType: TextInputType.emailAddress,
                       ),
@@ -97,7 +97,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                       ElevatedButton(
                         onPressed: _resetPassword,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
@@ -106,7 +106,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                         ),
                         child: const Text(
                           "Send Reset Link",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                          style: TextStyle(color: AppColors.text1, fontSize: 18),
                         ),
                       ),
                     ],
@@ -121,7 +121,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                 child: const Text(
                   "Back to Login",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.text1,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

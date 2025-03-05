@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:skripsi/constants/app_colors.dart';
+import 'package:skripsi/pages/admin/admin_change_password_page.dart';
+import 'package:skripsi/pages/admin/admin_profile_page.dart';
 
 class AdminSettingPage extends StatefulWidget {
   const AdminSettingPage({super.key});
@@ -21,14 +24,26 @@ class _AdminSettingPageState extends State<AdminSettingPage> {
         children: [
           ListTile(
             leading: const Icon(Icons.person),
-            title: const Text("Edit Profile"),
-            onTap: () {},
+            title: const Text("Profile"),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AdminProfilePage(),
+                ),
+              );
+            },
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.lock),
             title: const Text("Change Password"),
-            onTap: () {},
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => const AdminChangePasswordPage(),
+              );
+            },
           ),
           const Divider(),
           SwitchListTile(
@@ -87,7 +102,7 @@ class _AdminSettingPageState extends State<AdminSettingPage> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text("Logout", style: TextStyle(color: Colors.red)),
+              child: const Text("Logout", style: TextStyle(color: AppColors.cancel)),
             ),
           ],
         );

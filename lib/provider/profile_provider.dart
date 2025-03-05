@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:skripsi/constants/app_strings.dart';
 
 class ProfileProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -13,6 +15,7 @@ class ProfileProvider with ChangeNotifier {
   String _role = '';
   String _profileImage = '';
   String _faceImage = '';
+  bool isAdmin = false;
 
   String get name => _name;
   String get role => _role;
@@ -21,18 +24,20 @@ class ProfileProvider with ChangeNotifier {
 
   Future<void> loadProfile() async {
     try {
-      final User? currentUser  = _auth.currentUser ;
+      final User? currentUser = _auth.currentUser;
       if (currentUser == null) throw Exception("User  not authenticated");
-      
-      final doc = await _firestore.collection('users').doc(currentUser.uid).get();
 
-      if (doc.exists && doc.data() != null){
-        final data = doc.data() as Map<String, dynamic>; 
+      if (currentUser.email == AppStrings.adminEmail && kIsWeb) isAdmin = true;
 
-        _name = data.containsKey('name') ? data['name'] as String : "Unknown";
-        _role = data.containsKey('role') ? data['role'] as String : "-";
-        _profileImage = data.containsKey('profileImage') ? data['profileImage'] as String : "";
-        _faceImage = data.containsKey('faceImage') ? data['faceImage'] as String : "";
+      final doc = await _firestore.collection(isAdmin ? 'admin' : 'users').doc(currentUser.uid).get();
+
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data() as Map<String, dynamic>;
+
+        _name = data.containsKey('name') ? data['name'] : "Unknown";
+        _role = data.containsKey('role') ? data['role'] : "-";
+        _profileImage = data.containsKey('profileImage') ? data['profileImage'] : "";
+        _faceImage = data.containsKey('faceImage') ? data['faceImage'] : "";
       } else {
         _name = "Unknown";
         _role = "-";
@@ -47,26 +52,31 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateProfile(String name, String role, File? profileImage) async {
+  Future<void> updateProfile(String name, String role, [File? profileImage, Uint8List? adminImage]) async {
     try {
-      final User? currentUser  = _auth.currentUser;
-      if (currentUser  == null) throw Exception("User  not authenticated");
+      final User? currentUser = _auth.currentUser;
+      if (currentUser == null) throw Exception("User  not authenticated");
 
       _name = name;
       _role = role;
 
-      if (profileImage != null && profileImage.existsSync()) {
-        String fileName = 'users/${currentUser.uid}/profile/${currentUser.uid}.jpg';
-        Reference ref = _storage.ref().child(fileName);
+      String fileName = isAdmin ? 'admin/${currentUser.uid}.jpg' : 'users/${currentUser.uid}/profile/${currentUser.uid}.jpg';
+      Reference ref = _storage.ref().child(fileName);
 
+      if (profileImage != null && profileImage.existsSync()) {
         await ref.putFile(profileImage);
         _profileImage = await ref.getDownloadURL();
+      } else if (adminImage != null) {
+        SettableMetadata metadata = SettableMetadata(
+          contentType: "image/jpeg",
+        );
+        await ref.putData(adminImage, metadata);
+        _profileImage = await ref.getDownloadURL();
+      } else {
+        print("No new image selected, keeping existing one.");
       }
-      
-      await _firestore
-          .collection('users')
-          .doc(currentUser.uid)
-          .set({
+
+      await _firestore.collection(isAdmin ? 'admin' : 'users').doc(currentUser.uid).set({
         'name': _name,
         'role': _role,
         'profileImage': _profileImage,
@@ -75,7 +85,61 @@ class ProfileProvider with ChangeNotifier {
       await loadProfile();
     } catch (e) {
       debugPrint('Error updating profile: $e');
-      throw Exception('Failed to update profile');
+    }
+  }
+
+  Future selectImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final Uint8List imageBytes = await image.readAsBytes();
+      return imageBytes;
+    }
+    return null;
+  }
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    try {
+      final User? user = _auth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      await user.updatePassword(newPassword);
+
+      debugPrint("Password updated successfully!");
+    } on FirebaseAuthException catch (e) {
+      debugPrint("Failed to change password: ${e.message}");
+      throw Exception(e.message);
+    }
+  }
+
+  Future<void> removeProfileImage() async {
+    try {
+      final User? currentUser = _auth.currentUser;
+      if (currentUser == null) throw Exception("User not authenticated");
+
+      String fileName = isAdmin ? 'admin/${currentUser.uid}.jpg' : 'users/${currentUser.uid}/profile/${currentUser.uid}.jpg';
+      Reference ref = _storage.ref().child(fileName);
+
+      await ref.delete();
+
+      await _firestore.collection(isAdmin ? 'admin' : 'users').doc(currentUser.uid).update({
+        'profileImage': "",
+      });
+
+      _profileImage = "";
+      notifyListeners();
+
+      debugPrint("Profile image removed successfully!");
+    } catch (e) {
+      debugPrint("Failed to remove profile image: $e");
+      throw Exception("Failed to remove profile image");
     }
   }
 }

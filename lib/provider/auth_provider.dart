@@ -2,13 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:skripsi/constants/app_strings.dart';
 import 'package:skripsi/pages/admin/all_admin_pages.dart';
 import 'package:skripsi/pages/users/all_users_pages.dart';
 
 class MyAuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? _user;
-  final String _adminEmail = "admin@gmail.com";
 
   MyAuthProvider() {
     _auth.authStateChanges().listen((User ? user) async {
@@ -24,7 +24,7 @@ class MyAuthProvider with ChangeNotifier {
   }
   
   User? get user => _user;
-  String get adminEmail => _adminEmail;
+  String get adminEmail => AppStrings.adminEmail;
 
   Future<void> signIn(String email, String password, BuildContext context) async {
     showDialog(
@@ -47,11 +47,11 @@ class MyAuthProvider with ChangeNotifier {
 
         Navigator.pop(context);
 
-        if (email.trim().toLowerCase() == _adminEmail && kIsWeb) {
+        if (email.trim().toLowerCase() == AppStrings.adminEmail && kIsWeb) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const AllAdminPage()),
           );
-        } else if (email.trim().toLowerCase() != _adminEmail  && !kIsWeb) {
+        } else if (email.trim().toLowerCase() != AppStrings.adminEmail && !kIsWeb) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const AllPages()),
           );
