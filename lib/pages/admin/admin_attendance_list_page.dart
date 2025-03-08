@@ -4,8 +4,7 @@ class AdminAttendanceListPage extends StatefulWidget {
   const AdminAttendanceListPage({super.key});
 
   @override
-  State<AdminAttendanceListPage> createState() =>
-      _AdminAttendanceListPageState();
+  State<AdminAttendanceListPage> createState() => _AdminAttendanceListPageState();
 }
 
 class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
@@ -109,19 +108,16 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
   Widget _buildDataTable() {
     var filteredList = attendanceList.where((entry) {
       return searchController.text.isEmpty ||
-          entry["name"]!
-              .toLowerCase()
-              .contains(searchController.text.toLowerCase());
+          entry["name"]!.toLowerCase().contains(searchController.text.toLowerCase());
     }).toList();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: ConstrainedBox(
-        constraints:
-            BoxConstraints(minWidth: MediaQuery.of(context).size.width),
+        constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
         child: DataTable(
           columnSpacing: 20,
-          columns: [
+          columns: const [
             DataColumn(label: Text("No")),
             DataColumn(label: Text("Name")),
             DataColumn(label: Text("Check-in")),
@@ -197,8 +193,7 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
         const SizedBox(height: 5),
         photoPath.isNotEmpty
             ? Image.asset(photoPath, height: 100, fit: BoxFit.cover)
-            : const Text("No photo available",
-                style: TextStyle(color: Colors.grey)),
+            : const Text("No photo available", style: TextStyle(color: Colors.grey)),
       ],
     );
   }

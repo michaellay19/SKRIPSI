@@ -78,7 +78,7 @@ class TermsAndConditionsPage extends StatelessWidget {
             const Divider(),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context); // Return to the previous screen
+                Navigator.pop(context);
               },
               child: const Text('Agree & Continue'),
             ),

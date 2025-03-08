@@ -11,7 +11,7 @@ class MyAuthProvider with ChangeNotifier {
   User? _user;
 
   MyAuthProvider() {
-    _auth.authStateChanges().listen((User ? user) async {
+    _auth.authStateChanges().listen((User? user) async {
       _user = user;
       notifyListeners();
 
@@ -22,7 +22,7 @@ class MyAuthProvider with ChangeNotifier {
 
     _loadUserFromLocal();
   }
-  
+
   User? get user => _user;
   String get adminEmail => AppStrings.adminEmail;
 
@@ -33,16 +33,16 @@ class MyAuthProvider with ChangeNotifier {
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    try{
+    try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password.trim(),
       );
 
       if (userCredential.user != null) {
-        _user = userCredential.user; 
+        _user = userCredential.user;
         notifyListeners();
-        
+
         await _saveUserLocally(email.trim());
 
         Navigator.pop(context);

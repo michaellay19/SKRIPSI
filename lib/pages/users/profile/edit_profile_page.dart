@@ -20,21 +20,21 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _roleController = TextEditingController();
+  final _positionController = TextEditingController();
   File? _profileImage;
 
   @override
   void initState() {
     super.initState();
     _nameController.text = widget.profileModel.name;
-    _roleController.text = widget.profileModel.role;
+    _positionController.text = widget.profileModel.position;
   }
 
   void _updateProfile() async {
     if (_formKey.currentState!.validate()) {
       final profileModel = ProfileModel(
         name: _nameController.text,
-        role: _roleController.text,
+        position: _positionController.text,
         profileImage: _profileImage?.path ?? widget.profileModel.profileImage,
       );
 
@@ -93,11 +93,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 },
               ),
               TextFormField(
-                controller: _roleController,
-                decoration: const InputDecoration(labelText: 'Role'),
+                controller: _positionController,
+                decoration: const InputDecoration(labelText: 'position'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your role';
+                    return 'Please enter your position';
                   }
                   return null;
                 },

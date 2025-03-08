@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:typed_data';
+import 'package:skripsi/constants/app_colors.dart';
+import 'package:skripsi/model/employee_model.dart';
 
 class AdminEmployeeListPage extends StatefulWidget {
   const AdminEmployeeListPage({super.key});
@@ -11,97 +13,220 @@ class AdminEmployeeListPage extends StatefulWidget {
 
 class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
   final TextEditingController _searchController = TextEditingController();
-  final List<Map<String, String>> employees = [
-    {
-      "no": "1",
-      "name": "Admin",
-      "email": "admin@gmail.com",
-      "nik": "12345678",
-      "gender": "Male",
-      "dob": "1990-01-01",
-      "pob": "Jakarta",
-      "position": "Manager",
-      "religion": "Islam",
-      "address": "Jl. Sudirman No.1",
-      "employee_status": "Permanent",
-      "join_date": "2020-05-10",
-      "phone": "081234567890"
-    },
-  ];
+  final List<Employee> employees = [];
 
-  Uint8List? _selectedImage;
+  @override
+  void initState() {
+    super.initState();
+    _loadEmployees();
+  }
 
-  void _showemployeeDialog({Map<String, String>? employee}) {
+  Future<void> _loadEmployees() async {
+    final firestore = FirebaseFirestore.instance;
+    final snapshot = await firestore.collectionGroup("profile").get();
+
+    List<Employee> loadedEmployees = snapshot.docs.map((doc) {
+      return Employee(
+        uid: doc.id,
+        no: doc["no"],
+        name: doc["name"],
+        nik: doc["nik"],
+        email: doc["email"],
+        gender: doc["gender"],
+        dob: doc["dob"],
+        pob: doc["pob"],
+        position: doc["position"],
+        religion: doc["religion"],
+        address: doc["address"],
+        employeeStatus: doc["employeeStatus"],
+        joinDate: doc["joinDate"],
+        phone: doc["phone"],
+      );
+    }).toList();
+
+    loadedEmployees.sort((a, b) => a.no.compareTo(b.no));
+
+    setState(() {
+      employees.clear();
+      employees.addAll(loadedEmployees);
+    });
+  }
+
+  void _showEmployeeDialog({Employee? employee}) {
     final isEditing = employee != null;
     final controllers = {
-      "name": TextEditingController(text: employee?['name'] ?? ''),
-      "email": TextEditingController(text: employee?['email'] ?? ''),
-      "nik": TextEditingController(text: employee?['nik'] ?? ''),
-      "gender": TextEditingController(text: employee?['gender'] ?? ''),
-      "dob": TextEditingController(text: employee?['dob'] ?? ''),
-      "pob": TextEditingController(text: employee?['pob'] ?? ''),
-      "position": TextEditingController(text: employee?['position'] ?? ''),
-      "religion": TextEditingController(text: employee?['religion'] ?? ''),
-      "address": TextEditingController(text: employee?['address'] ?? ''),
-      "employee_status":
-          TextEditingController(text: employee?['employee_status'] ?? ''),
-      "join_date": TextEditingController(text: employee?['join_date'] ?? ''),
-      "phone": TextEditingController(text: employee?['phone'] ?? ''),
+      for (var field in [
+        "name",
+        "nik",
+        "email",
+        "gender",
+        "dob",
+        "pob",
+        "position",
+        "religion",
+        "address",
+        "employee_status",
+        "join_date",
+        "phone"
+      ])
+        field: TextEditingController(text: employee != null ? employee.toMap()[field] : ""),
     };
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: Text(isEditing ? "Edit employee" : "Add employee"),
-          content: SingleChildScrollView(
+      builder: (context) => AlertDialog(
+        title: Text(isEditing ? "Edit Employee" : "Add Employee"),
+        content: SingleChildScrollView(
+          child: SizedBox(
+            width: 600,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                ...controllers.entries
-                    .map((entry) => _buildTextField(entry.value, entry.key)),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: _pickImage,
-                  child: const Text("Upload Photo"),
-                ),
-                if (_selectedImage != null)
-                  Image.memory(_selectedImage!, height: 100),
+                _buildField(controllers["name"]!, "Name", isRequired: true, isEditable: false),
+                _buildField(controllers["nik"]!, "NIK", isNik: true, isRequired: true, isEditable: false),
+                _buildField(controllers["email"]!, "Email", isRequired: true, isEditable: false),
+                _buildField(controllers["gender"]!, "Gender"),
+                _buildField(controllers["dob"]!, "DOB", isDate: true),
+                _buildField(controllers["pob"]!, "Place of Birth"),
+                _buildField(controllers["position"]!, "Position"),
+                _buildField(controllers["religion"]!, "Religion"),
+                _buildField(controllers["address"]!, "Address"),
+                _buildField(controllers["employee_status"]!, "Employee Status"),
+                _buildField(controllers["join_date"]!, "Join Date", isDate: true),
+                _buildField(controllers["phone"]!, "Phone"),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  if (isEditing) {
-                    employee.addAll(controllers.map(
-                        (key, controller) => MapEntry(key, controller.text)));
-                  } else {
-                    employees.add({
-                      "no": (employees.length + 1).toString(),
-                      ...controllers.map(
-                          (key, controller) => MapEntry(key, controller.text)),
-                    });
-                  }
-                });
-                Navigator.pop(context);
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => _saveEmployee(controllers, isEditing, employee),
+            child: const Text("Save"),
+          ),
+        ],
+      ),
     );
   }
 
-  void _showemployeeDetails(Map<String, String> employee) {
+  Future<void> _saveEmployee(Map<String, TextEditingController> controllers, bool isEditing, Employee? employee) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      String uid;
+
+      if (!isEditing) {
+        final auth = FirebaseAuth.instance;
+        UserCredential userCredential = await auth.createUserWithEmailAndPassword(
+          email: controllers["email"]!.text,
+          password: "User123",
+        );
+        uid = userCredential.user!.uid;
+      } else {
+        uid = employee!.uid;
+      }
+
+      await firestore.collection("users").doc(uid).set({
+        "createdAt": FieldValue.serverTimestamp(),
+      });
+
+      final employeeData = Employee(
+        uid: uid,
+        no: isEditing ? employee!.no : (employees.length + 1).toString().padLeft(4, '0'),
+        name: controllers["name"]!.text,
+        nik: controllers["nik"]!.text,
+        email: controllers["email"]!.text,
+        gender: controllers["gender"]!.text,
+        dob: controllers["dob"]!.text,
+        pob: controllers["pob"]!.text,
+        position: controllers["position"]!.text,
+        religion: controllers["religion"]!.text,
+        address: controllers["address"]!.text,
+        employeeStatus: controllers["employee_status"]!.text,
+        joinDate: controllers["join_date"]!.text,
+        phone: controllers["phone"]!.text,
+      );
+
+      await firestore.collection("users").doc(uid).collection("profile").doc(uid).set(employeeData.toMap());
+
+      setState(() {
+        if (isEditing) {
+          int index = employees.indexWhere((e) => e.uid == uid);
+          print(index);
+          print(employees);
+          if (index != -1) employees[index] = employeeData;
+          print(employees);
+        } else {
+          employees.add(employeeData);
+        }
+      });
+
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.toString()}")),
+      );
+    }
+  }
+
+  // void _showDeleteConfirmationDialog(Employee employee) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text("Delete Employee"),
+  //       content: const Text("Are you sure you want to delete this employee?"),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: const Text("Cancel"),
+  //         ),
+  //         TextButton(
+  //           onPressed: () {
+  //             await _deleteEmployee(employee);
+  //             setState(() {
+  //               employees.remove(employee);
+  //               for (int i = 0; i < employees.length; i++) {
+  //                 employees[i] = employees[i].copyWith(no: (i + 1).toString().padLeft(4, '0'));
+  //               }
+  //             });
+  //             Navigator.pop(context);
+  //           },
+  //           child: const Text("Delete", style: TextStyle(color: Colors.red)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  // Future<void> _deleteEmployee(Employee employee) async {
+  //   try {
+  //     final firestore = FirebaseFirestore.instance;
+  //     final auth = FirebaseAuth.instance;
+
+  //     await firestore.collection("users").doc(employee.uid).delete();
+
+  //     User? user = auth.currentUser;
+  //     print(user?.uid);
+  // if (user != null && user.uid == employee.uid) {
+  //   await user.delete();
+  // }
+
+  //     setState(() {
+  //       employees.removeWhere((e) => e.uid == employee.uid);
+
+  //       for (int i = 0; i < employees.length; i++) {
+  //         employees[i] = employees[i].copyWith(no: (i + 1).toString().padLeft(4, '0'));
+  //       }
+  //     });
+  //   } catch (e) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text("Error deleting employee: ${e.toString()}")),
+  //     );
+  //   }
+  // }
+
+  void _showEmployeeDetails(Employee employee) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -112,30 +237,27 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
           title: const Text(
             "Employee Details",
             textAlign: TextAlign.center,
-            style: TextStyle(fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailItem(Icons.badge, "No", employee["no"] ?? "-"),
-                _buildDetailItem(Icons.person, "Name", employee["name"] ?? "-"),
-                _buildDetailItem(Icons.email, "Email", employee["email"] ?? "-"),
-                _buildDetailItem(Icons.credit_card, "NIK", employee["nik"] ?? "-"),
-                _buildDetailItem(Icons.male, "Gender", employee["gender"] ?? "-"),
-                _buildDetailItem(Icons.cake, "DOB", employee["dob"] ?? "-"),
-                _buildDetailItem(
-                    Icons.location_on, "Place of Birth", employee["pob"] ?? "-"),
-                _buildDetailItem(
-                    Icons.work, "Position", employee["position"] ?? "-"),
-                _buildDetailItem(
-                    Icons.location_city, "Address", employee["address"] ?? "-"),
-                _buildDetailItem(Icons.check_circle, "Employee Status",
-                    employee["employee_status"] ?? "-"),
-                _buildDetailItem(
-                    Icons.date_range, "Join Date", employee["join_date"] ?? "-"),
-                _buildDetailItem(Icons.phone, "Phone", employee["phone"] ?? "-"),
-              ],
+            child: SizedBox(
+              width: 600,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDetailItem(Icons.badge, "No", employee.no),
+                  _buildDetailItem(Icons.person, "Name", employee.name),
+                  _buildDetailItem(Icons.email, "Email", employee.email),
+                  _buildDetailItem(Icons.credit_card, "NIK", employee.nik),
+                  _buildDetailItem(Icons.male, "Gender", employee.gender ?? "-"),
+                  _buildDetailItem(Icons.cake, "DOB", employee.dob ?? "-"),
+                  _buildDetailItem(Icons.location_on, "Place of Birth", employee.pob ?? "-"),
+                  _buildDetailItem(Icons.work, "Position", employee.position ?? "-"),
+                  _buildDetailItem(Icons.location_city, "Address", employee.address ?? "-"),
+                  _buildDetailItem(Icons.check_circle, "Employee Status", employee.employeeStatus ?? "-"),
+                  _buildDetailItem(Icons.date_range, "Join Date", employee.joinDate ?? "-"),
+                  _buildDetailItem(Icons.phone, "Phone", employee.phone ?? "-"),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -149,41 +271,61 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
     );
   }
 
-  Widget _buildDetailItem(IconData icon, String label, String value) {
-    return Column(
-      children: [
-        ListTile(
-          leading: Icon(icon, color: Colors.blue),
-          title: Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text(value),
-        ),
-        Divider(),
-      ],
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String label) {
+  Widget _buildField(TextEditingController controller, String label,
+      {bool isNik = false, bool isDate = false, bool isRequired = false, bool isEditable = true}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
+        maxLength: isNik ? 16 : null,
+        readOnly: isDate || !isEditable,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
+          suffixIcon: isDate ? const Icon(Icons.calendar_today) : null,
         ),
+        validator: (value) {
+          if (isRequired && (value == null || value.isEmpty)) {
+            return "$label is required";
+          }
+          if (isNik && value!.length != 16) {
+            return "NIK must be exactly 16 digits.";
+          }
+          return null;
+        },
+        onTap: isDate
+            ? () async {
+                DateTime? pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(1900),
+                  lastDate: DateTime.now(),
+                );
+                if (pickedDate != null) {
+                  controller.text = pickedDate.toLocal().toString().split(' ')[0];
+                }
+              }
+            : null,
       ),
     );
   }
 
-  Future<void> _pickImage() async {
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      final bytes = await pickedFile.readAsBytes();
-      setState(() {
-        _selectedImage = bytes;
-      });
-    }
+  Widget _buildDetailItem(IconData icon, String label, String value) {
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(icon, color: AppColors.primary),
+          title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(value),
+        ),
+        const Divider(),
+      ],
+    );
+  }
+
+  List<Employee> get _filteredEmployees {
+    final query = _searchController.text.toLowerCase();
+    return employees.where((e) => e.name.toLowerCase().contains(query)).toList();
   }
 
   @override
@@ -201,19 +343,17 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                     decoration: InputDecoration(
                       labelText: "Search employee",
                       prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
+                    onChanged: (value) => setState(() {}),
                   ),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  onPressed: () => _showemployeeDialog(),
-                  icon: const Icon(Icons.person_add, color: Colors.white),
-                  label: const Text("Add employee",
-                      style: TextStyle(color: Colors.white)),
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  onPressed: () => _showEmployeeDialog(),
+                  icon: const Icon(Icons.person_add, color: AppColors.text1),
+                  label: const Text("Add employee", style: TextStyle(color: AppColors.text1)),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                 ),
               ],
             ),
@@ -230,30 +370,26 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                       DataColumn(label: Text("EMAIL")),
                       DataColumn(label: Text("ACTIONS")),
                     ],
-                    rows: employees
+                    showBottomBorder: true,
+                    rows: _filteredEmployees
                         .map((employee) => DataRow(cells: [
-                              DataCell(Text(employee["no"]!)),
-                              DataCell(Text(employee["name"]!)),
-                              DataCell(Text(employee["nik"]!)),
-                              DataCell(Text(employee["email"]!)),
+                              DataCell(Text(employee.no)),
+                              DataCell(Text(employee.name)),
+                              DataCell(Text(employee.nik)),
+                              DataCell(Text(employee.email)),
                               DataCell(Row(
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.visibility,
-                                        color: Colors.orange),
-                                    onPressed: () => _showemployeeDetails(employee),
+                                    icon: const Icon(Icons.visibility, color: Colors.orange),
+                                    onPressed: () => _showEmployeeDetails(employee),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.edit,
-                                        color: Colors.blue),
-                                    onPressed: () =>
-                                        _showemployeeDialog(employee: employee),
+                                    icon: const Icon(Icons.edit, color: Colors.blue),
+                                    onPressed: () => _showEmployeeDialog(employee: employee),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: Colors.red),
-                                    onPressed: () =>
-                                        setState(() => employees.remove(employee)),
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () {},
                                   ),
                                 ],
                               )),

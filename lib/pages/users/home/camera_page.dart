@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,18 +10,17 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-
 import 'package:skripsi/model/facepainter_model.dart';
 import 'package:skripsi/pages/users/home/home_page.dart';
 import 'package:skripsi/provider/camera_provider.dart';
-
-import 'package:skripsi/model/facenet_model_mobile.dart' if (dart.library.html) 'package:skripsi/model/facenet_model_web.dart';
+import 'package:skripsi/model/facenet_model_mobile.dart'
+    if (dart.library.html) 'package:skripsi/model/facenet_model_web.dart';
 
 class CameraPage extends StatefulWidget {
   final String activityType;
 
   const CameraPage({super.key, required this.activityType});
-  
+
   @override
   CameraPageState createState() => CameraPageState();
 }
@@ -39,7 +37,8 @@ class CameraPageState extends State<CameraPage> {
   @override
   void initState() {
     super.initState();
-    _faceDetector = FaceDetector(options: FaceDetectorOptions(enableTracking: true, performanceMode: FaceDetectorMode.accurate));
+    _faceDetector =
+        FaceDetector(options: FaceDetectorOptions(enableTracking: true, performanceMode: FaceDetectorMode.accurate));
     _initializeCamera();
   }
 
@@ -75,8 +74,7 @@ class CameraPageState extends State<CameraPage> {
       if (!mounted || _controller == null) return;
 
       if (_debounceTimer?.isActive ?? false) return;
-        _debounceTimer = Timer(const Duration(milliseconds: 1000), () async {
-    
+      _debounceTimer = Timer(const Duration(milliseconds: 1000), () async {
         final WriteBuffer allBytes = WriteBuffer();
         for (Plane plane in image.planes) {
           allBytes.putUint8List(plane.bytes);
@@ -97,7 +95,6 @@ class CameraPageState extends State<CameraPage> {
 
         print("Processing image...");
         print("Detected faces: ${faces.length}");
-
 
         if (faces.isNotEmpty) {
           Face firstFace = faces[0];
@@ -138,8 +135,7 @@ class CameraPageState extends State<CameraPage> {
       } else {
         bool isVerified = await faceNet.verifyFace(imageFile);
         if (isVerified) {
-          await Provider.of<CameraProvider>(context, listen: false)
-              .uploadImage(imageFile, widget.activityType);
+          await Provider.of<CameraProvider>(context, listen: false).uploadImage(imageFile, widget.activityType);
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -158,9 +154,7 @@ class CameraPageState extends State<CameraPage> {
     });
 
     List<double> embeddings = faceNet.runFaceNet(imageFile);
-    final storageRef = FirebaseStorage.instance
-        .ref()
-        .child('users/${currentUser.uid}/face/${currentUser.uid}.jpg');
+    final storageRef = FirebaseStorage.instance.ref().child('users/${currentUser.uid}/face/${currentUser.uid}.jpg');
 
     await storageRef.putFile(imageFile);
     final downloadUrl = await storageRef.getDownloadURL();
@@ -175,7 +169,7 @@ class CameraPageState extends State<CameraPage> {
     });
 
     print("Profile image captured and saved!");
-    print("embeddings : ${embeddings}");
+    print("embeddings : $embeddings");
 
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
   }
@@ -271,4 +265,3 @@ class CameraPageState extends State<CameraPage> {
     );
   }
 }
-

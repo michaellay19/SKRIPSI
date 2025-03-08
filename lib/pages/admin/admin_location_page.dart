@@ -126,7 +126,7 @@ class _AdminLocationPageState extends State<AdminLocationPage> {
                                 CircleMarker(
                                   point: _selectedLocation!,
                                   radius: radius,
-                                  color: Colors.blue.withOpacity(0.3),
+                                  color: Colors.blue.withValues(alpha: 0.3),
                                   borderColor: Colors.blue,
                                   borderStrokeWidth: 1,
                                   useRadiusInMeter: true,

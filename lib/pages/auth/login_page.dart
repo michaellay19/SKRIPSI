@@ -20,7 +20,8 @@ class LoginPageState extends State<LoginPage> {
 
   void _submitLogin() {
     if (_formKey.currentState!.validate()) {
-      Provider.of<MyAuthProvider>(context, listen: false).signIn(emailController.text, passwordController.text, context);
+      Provider.of<MyAuthProvider>(context, listen: false)
+          .signIn(emailController.text, passwordController.text, context);
     }
   }
 

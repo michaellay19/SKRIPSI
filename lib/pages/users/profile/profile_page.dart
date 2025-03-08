@@ -38,13 +38,13 @@ class _ProfilePageState extends State<ProfilePage> {
         builder: (context) => EditProfilePage(
           profileModel: ProfileModel(
             name: profileProvider.name,
-            role: profileProvider.role,
+            position: profileProvider.position,
             profileImage: profileProvider.profileImage,
           ),
           onProfileUpdate: (updatedProfileModel) {
             profileProvider.updateProfile(
               updatedProfileModel.name,
-              updatedProfileModel.role,
+              updatedProfileModel.position,
               File(updatedProfileModel.profileImage),
             );
           },
@@ -83,13 +83,11 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             CircleAvatar(
               radius: 50,
-              backgroundImage: profileProvider.profileImage.isNotEmpty
-                ? NetworkImage(profileProvider.profileImage)
-                : null,
+              backgroundImage:
+                  profileProvider.profileImage.isNotEmpty ? NetworkImage(profileProvider.profileImage) : null,
               child: profileProvider.profileImage.isEmpty
-                ? const Icon(Icons.admin_panel_settings,
-                    size: 40, color: Colors.blueAccent)
-                : null,
+                  ? const Icon(Icons.admin_panel_settings, size: 40, color: Colors.blueAccent)
+                  : null,
             ),
             const SizedBox(height: 10),
             Text(
@@ -97,7 +95,7 @@ class _ProfilePageState extends State<ProfilePage> {
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             Text(
-              profileProvider.role,
+              profileProvider.position,
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 20),
@@ -109,7 +107,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('Edit Profile', style: TextStyle(color: Colors.white),),
+              child: const Text(
+                'Edit Profile',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
             const SizedBox(height: 30),
             _buildMenuOption(Icons.settings, 'Settings', _navigateToSettings),

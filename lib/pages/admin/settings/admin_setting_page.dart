@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:skripsi/constants/app_colors.dart';
-import 'package:skripsi/pages/admin/admin_change_password_page.dart';
-import 'package:skripsi/pages/admin/admin_profile_page.dart';
+import 'package:skripsi/pages/admin/settings/admin_change_password_page.dart';
+import 'package:skripsi/pages/admin/settings/admin_profile_page.dart';
 
 class AdminSettingPage extends StatefulWidget {
   const AdminSettingPage({super.key});

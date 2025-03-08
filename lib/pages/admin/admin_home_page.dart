@@ -116,7 +116,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      shadowColor: color.withOpacity(0.3),
+      shadowColor: color.withValues(alpha: 0.3),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         child: Column(
@@ -124,7 +124,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
           children: [
             CircleAvatar(
               radius: 28,
-              backgroundColor: color.withOpacity(0.15),
+              backgroundColor: color.withValues(alpha: 0.15),
               child: Icon(icon, color: color, size: 30),
             ),
             const SizedBox(height: 10),

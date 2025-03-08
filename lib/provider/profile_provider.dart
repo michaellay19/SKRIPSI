@@ -12,13 +12,13 @@ class ProfileProvider with ChangeNotifier {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   String _name = '';
-  String _role = '';
+  String _position = '';
   String _profileImage = '';
   String _faceImage = '';
   bool isAdmin = false;
 
   String get name => _name;
-  String get role => _role;
+  String get position => _position;
   String get profileImage => _profileImage;
   String get faceImage => _faceImage;
 
@@ -29,18 +29,21 @@ class ProfileProvider with ChangeNotifier {
 
       if (currentUser.email == AppStrings.adminEmail && kIsWeb) isAdmin = true;
 
-      final doc = await _firestore.collection(isAdmin ? 'admin' : 'users').doc(currentUser.uid).get();
+      final doc = await _firestore
+          .collection(isAdmin ? 'admin' : 'users')
+          .doc(isAdmin ? currentUser.uid : '${currentUser.uid}/profile/${currentUser.uid}')
+          .get();
 
       if (doc.exists && doc.data() != null) {
         final data = doc.data() as Map<String, dynamic>;
 
-        _name = data.containsKey('name') ? data['name'] : "Unknown";
-        _role = data.containsKey('role') ? data['role'] : "-";
-        _profileImage = data.containsKey('profileImage') ? data['profileImage'] : "";
-        _faceImage = data.containsKey('faceImage') ? data['faceImage'] : "";
+        _name = data['name'] ?? "User";
+        _position = data['position'] ?? "-";
+        _profileImage = data['profileImage'] ?? "";
+        _faceImage = data['faceImage'] ?? "";
       } else {
-        _name = "Unknown";
-        _role = "-";
+        _name = "User";
+        _position = "-";
         _profileImage = '';
         _faceImage = '';
       }
@@ -52,33 +55,32 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateProfile(String name, String role, [File? profileImage, Uint8List? adminImage]) async {
+  Future<void> updateProfile(String name, String position, [File? profileImage, Uint8List? adminImage]) async {
     try {
       final User? currentUser = _auth.currentUser;
       if (currentUser == null) throw Exception("User  not authenticated");
 
       _name = name;
-      _role = role;
+      _position = position;
 
-      String fileName = isAdmin ? 'admin/${currentUser.uid}.jpg' : 'users/${currentUser.uid}/profile/${currentUser.uid}.jpg';
+      String fileName =
+          isAdmin ? 'admin/${currentUser.uid}.jpg' : 'users/${currentUser.uid}/profile/${currentUser.uid}.jpg';
       Reference ref = _storage.ref().child(fileName);
 
       if (profileImage != null && profileImage.existsSync()) {
         await ref.putFile(profileImage);
         _profileImage = await ref.getDownloadURL();
       } else if (adminImage != null) {
-        SettableMetadata metadata = SettableMetadata(
-          contentType: "image/jpeg",
-        );
-        await ref.putData(adminImage, metadata);
+        await ref.putData(adminImage, SettableMetadata(contentType: "image/jpeg"));
         _profileImage = await ref.getDownloadURL();
-      } else {
-        print("No new image selected, keeping existing one.");
       }
 
-      await _firestore.collection(isAdmin ? 'admin' : 'users').doc(currentUser.uid).set({
+      await _firestore
+          .collection(isAdmin ? 'admin' : 'users')
+          .doc(isAdmin ? currentUser.uid : '${currentUser.uid}/profile/${currentUser.uid}')
+          .set({
         'name': _name,
-        'role': _role,
+        'position': _position,
         'profileImage': _profileImage,
       }, SetOptions(merge: true));
 
@@ -124,12 +126,16 @@ class ProfileProvider with ChangeNotifier {
       final User? currentUser = _auth.currentUser;
       if (currentUser == null) throw Exception("User not authenticated");
 
-      String fileName = isAdmin ? 'admin/${currentUser.uid}.jpg' : 'users/${currentUser.uid}/profile/${currentUser.uid}.jpg';
+      String fileName =
+          isAdmin ? 'admin/${currentUser.uid}.jpg' : 'users/${currentUser.uid}/profile/${currentUser.uid}.jpg';
       Reference ref = _storage.ref().child(fileName);
 
       await ref.delete();
 
-      await _firestore.collection(isAdmin ? 'admin' : 'users').doc(currentUser.uid).update({
+      await _firestore
+          .collection(isAdmin ? 'admin' : 'users')
+          .doc(isAdmin ? currentUser.uid : '${currentUser.uid}/profile/${currentUser.uid}')
+          .update({
         'profileImage': "",
       });
 

@@ -14,12 +14,8 @@ class LeaveRequestProvider with ChangeNotifier {
       if (_currentUserId.isEmpty) {
         throw Exception('User not logged in');
       }
-      
-      await _firestore
-          .collection('users')
-          .doc(_currentUserId)
-          .collection('leave_requests')
-          .add({
+
+      await _firestore.collection('users').doc(_currentUserId).collection('leave_requests').add({
         'leaveType': request.leaveType,
         'startDate': request.startDate.toIso8601String(),
         'endDate': request.endDate.toIso8601String(),
@@ -38,12 +34,7 @@ class LeaveRequestProvider with ChangeNotifier {
       return Stream.error('User not logged in');
     }
 
-    return _firestore
-        .collection('users')
-        .doc(_currentUserId)
-        .collection('leave_requests')
-        .snapshots()
-        .map((snapshot) {
+    return _firestore.collection('users').doc(_currentUserId).collection('leave_requests').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return LeaveRequest(
@@ -64,13 +55,8 @@ class LeaveRequestProvider with ChangeNotifier {
         throw Exception('User not logged in');
       }
 
-      await _firestore
-          .collection('users')
-          .doc(_currentUserId)
-          .collection('leave_requests')
-          .doc(requestId)
-          .delete();
-          
+      await _firestore.collection('users').doc(_currentUserId).collection('leave_requests').doc(requestId).delete();
+
       notifyListeners();
     } catch (e) {
       throw Exception('Failed to cancel leave request: $e');

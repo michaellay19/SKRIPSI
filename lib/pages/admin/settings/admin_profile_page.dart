@@ -17,7 +17,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
   Uint8List? _selectedImage;
   TextEditingController nameController = TextEditingController();
   TextEditingController emailController = TextEditingController(text: AppStrings.adminEmail);
-  TextEditingController roleController = TextEditingController();
+  TextEditingController positionController = TextEditingController();
 
   @override
   void initState() {
@@ -26,7 +26,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     profileProvider.loadProfile().then((_) {
       setState(() {
         nameController.text = profileProvider.name;
-        roleController.text = profileProvider.role;
+        positionController.text = profileProvider.position;
       });
     }).catchError((error) {
       print("Error loading profile: \$error");
@@ -35,7 +35,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
 
   Future<void> _saveProfile() async {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    await profileProvider.updateProfile(nameController.text, roleController.text, null, _selectedImage);
+    await profileProvider.updateProfile(nameController.text, positionController.text, null, _selectedImage);
     setState(() {
       isEditing = false;
     });
@@ -45,7 +45,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
   void dispose() {
     nameController.dispose();
     emailController.dispose();
-    roleController.dispose();
+    positionController.dispose();
     super.dispose();
   }
 
@@ -79,7 +79,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
               const SizedBox(height: 20),
               _buildProfileField("Full Name", nameController),
               _buildProfileField("Email", emailController, isEditable: false),
-              _buildProfileField("Role", roleController),
+              _buildProfileField("position", positionController),
               const SizedBox(height: 20),
               isEditing ? _buildEditModeButtons() : _buildEditButton(),
             ],

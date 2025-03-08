@@ -44,7 +44,7 @@ class _HomePageState extends State<HomePage> {
 
   TextStyle _getTimeAndSubtitleStyle(String time, {required bool isCheckIn}) {
     final hour = int.tryParse(time.split(":").first) ?? 0;
-    
+
     if (((isCheckIn && hour >= 9) || (!isCheckIn && hour < 17) && time != "-")) {
       return const TextStyle(color: Colors.red, fontWeight: FontWeight.bold);
     }
@@ -54,7 +54,7 @@ class _HomePageState extends State<HomePage> {
 
   String _getSubtitle(String time, {required bool isCheckIn}) {
     final hour = int.tryParse(time.split(":").first) ?? 0;
-    
+
     if (time == "-") {
       return isCheckIn ? "Not Clocked In" : "Not Clocked Out";
     }
@@ -72,7 +72,7 @@ class _HomePageState extends State<HomePage> {
 
     final profileImage = profileProvider.profileImage;
     final userName = profileProvider.name;
-    final userRole = profileProvider.role;
+    final userPosition = profileProvider.position;
 
     return Scaffold(
       appBar: AppBar(
@@ -80,12 +80,9 @@ class _HomePageState extends State<HomePage> {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundImage: profileProvider.profileImage.isNotEmpty
-                  ? NetworkImage(profileImage)
-                  : null,
+              backgroundImage: profileProvider.profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
               child: profileProvider.profileImage.isEmpty
-                  ? const Icon(Icons.admin_panel_settings,
-                      size: 40, color: Colors.blueAccent)
+                  ? const Icon(Icons.admin_panel_settings, size: 40, color: Colors.blueAccent)
                   : null,
             ),
             const SizedBox(width: 12),
@@ -101,7 +98,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 Text(
-                  userRole,
+                  userPosition,
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
@@ -168,20 +165,16 @@ class _HomePageState extends State<HomePage> {
                           title: "Clock In",
                           time: clockInTime,
                           subtitle: _getSubtitle(clockInTime, isCheckIn: true),
-                          timeStyle: _getTimeAndSubtitleStyle(clockInTime,
-                              isCheckIn: true),
-                          subtitleStyle: _getTimeAndSubtitleStyle(clockInTime,
-                              isCheckIn: true),
+                          timeStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
+                          subtitleStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
                         ),
                         const SizedBox(width: 16),
                         AttendanceCard(
                           title: "Clock Out",
                           time: clockOutTime,
                           subtitle: _getSubtitle(clockOutTime, isCheckIn: false),
-                          timeStyle: _getTimeAndSubtitleStyle(clockOutTime,
-                              isCheckIn: false),
-                          subtitleStyle: _getTimeAndSubtitleStyle(clockOutTime,
-                              isCheckIn: false),
+                          timeStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
+                          subtitleStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
                         ),
                       ],
                     ),
@@ -198,8 +191,7 @@ class _HomePageState extends State<HomePage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              const CameraPage(activityType: 'Clock In'),
+                          builder: (context) => const CameraPage(activityType: 'Clock In'),
                         ),
                       );
                     },
@@ -227,8 +219,7 @@ class _HomePageState extends State<HomePage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              const CameraPage(activityType: 'Clock Out'),
+                          builder: (context) => const CameraPage(activityType: 'Clock Out'),
                         ),
                       );
                     },
@@ -262,8 +253,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 12),
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: Provider.of<CameraProvider>(context, listen: false)
-                    .fetchActivities(),
+                stream: Provider.of<CameraProvider>(context, listen: false).fetchActivities(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());

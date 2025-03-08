@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:skripsi/components/nav_bar.dart';
+import 'package:skripsi/widgets/nav_bar.dart';
 import 'package:skripsi/pages/users/home/home_page.dart';
 import 'package:skripsi/pages/users/profile/profile_page.dart';
 import 'package:skripsi/pages/users/request/request_page.dart';
@@ -30,8 +30,10 @@ class _AllPagesState extends State<AllPages> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
-      bottomNavigationBar:
-          NaviBar(selectedIndex: _selectedIndex, onItemTapped: _onItemTapped),
+      bottomNavigationBar: NaviBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
+      ),
     );
   }
 }

@@ -18,8 +18,7 @@ class CameraProvider with ChangeNotifier {
       final String userId = currentUser.uid;
 
       String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      Reference ref =
-          _storage.ref().child('users/$userId/attendance/$fileName.jpg');
+      Reference ref = _storage.ref().child('users/$userId/attendance/$fileName.jpg');
 
       await ref.putFile(image);
       String downloadUrl = await ref.getDownloadURL();
@@ -31,11 +30,7 @@ class CameraProvider with ChangeNotifier {
         'activityType': activityType,
       };
 
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('attendance')
-          .add(imageData);
+      await _firestore.collection('users').doc(userId).collection('attendance').add(imageData);
 
       print('Image data saved successfully to Firestore.');
     } catch (e) {
