@@ -5,4 +5,5 @@ class AppStrings {
   static const String profile = "Profile";
   static const String settings = "Settings";
   static const String adminEmail = "admin@gmail.com";
+  static const String adminPass = "Admin123";
 }

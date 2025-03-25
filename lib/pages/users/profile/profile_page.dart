@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:skripsi/model/profile_model.dart';
-import 'package:skripsi/pages/users/profile/edit_profile_page.dart';
-import 'package:skripsi/pages/users/profile/setting_page.dart';
+import 'package:skripsi/pages/users/profile/change_password_page.dart';
+import 'package:skripsi/pages/users/profile/personal_info_page.dart';
 import 'package:skripsi/pages/users/profile/terms_and_conditions_page.dart';
 import 'package:skripsi/provider/auth_provider.dart';
 import 'package:skripsi/provider/profile_provider.dart';
@@ -31,33 +31,32 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _editProfile() {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+  void _editProfilePicture() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      profileProvider.updateProfile(
+        profileProvider.name,
+        profileProvider.position,
+        File(image.path),
+      );
+    }
+  }
+
+  void _navigateToPersonalInfo() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => EditProfilePage(
-          profileModel: ProfileModel(
-            name: profileProvider.name,
-            position: profileProvider.position,
-            profileImage: profileProvider.profileImage,
-          ),
-          onProfileUpdate: (updatedProfileModel) {
-            profileProvider.updateProfile(
-              updatedProfileModel.name,
-              updatedProfileModel.position,
-              File(updatedProfileModel.profileImage),
-            );
-          },
-        ),
+        builder: (context) => const PersonalInfoPage(),
       ),
     );
   }
 
-  void _navigateToSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const SettingsPage(),
-      ),
+  void _navigateToChangePass() {
+    showDialog(
+      context: context,
+      builder: (context) => const ChangePasswordPage(),
     );
   }
 
@@ -100,7 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _editProfile,
+              onPressed: _editProfilePicture,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 shape: RoundedRectangleBorder(
@@ -108,16 +107,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               child: const Text(
-                'Edit Profile',
+                'Change Profile Picture',
                 style: TextStyle(color: Colors.white),
               ),
             ),
             const SizedBox(height: 30),
-            _buildMenuOption(Icons.settings, 'Settings', _navigateToSettings),
+            _buildMenuOption(Icons.person, 'Personal Info', _navigateToPersonalInfo),
+            _buildMenuOption(Icons.lock_person, 'Change Password', _navigateToChangePass),
             _buildMenuOption(Icons.article, 'Terms & Conditions', _navigateToTermsAndConditions),
             const SizedBox(height: 20),
             GestureDetector(
-              onTap: _logout,
+              onTap: _showLogoutDialog,
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -132,6 +132,26 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: _logout,
+            child: const Text("Logout"),
+          ),
+        ],
       ),
     );
   }

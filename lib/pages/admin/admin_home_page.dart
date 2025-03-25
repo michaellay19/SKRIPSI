@@ -11,20 +11,6 @@ class AdminHomePage extends StatefulWidget {
 class _AdminHomePageState extends State<AdminHomePage> {
   DateTime selectedDate = DateTime.now();
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,14 +35,11 @@ class _AdminHomePageState extends State<AdminHomePage> {
             child: Row(
               children: [
                 Text(
-                  DateFormat('dd MMM yyyy').format(selectedDate),
+                  DateFormat('EEEE, dd MMM yyyy').format(selectedDate),
                   style: const TextStyle(fontSize: 14, color: Colors.black),
                 ),
-                const SizedBox(width: 6),
-                IconButton(
-                  icon: const Icon(Icons.calendar_today, color: Colors.black, size: 22),
-                  onPressed: () => _selectDate(context),
-                ),
+                const SizedBox(width: 10),
+                const Icon(Icons.calendar_today, color: Colors.black, size: 22),
               ],
             ),
           ),

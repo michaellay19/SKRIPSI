@@ -27,6 +27,14 @@ class MyAuthProvider with ChangeNotifier {
   String get adminEmail => AppStrings.adminEmail;
 
   Future<void> signIn(String email, String password, BuildContext context) async {
+    if (email.trim().isEmpty || password.trim().isEmpty) {
+      _showSnackBar(context, 'Please enter both email and password.');
+      return;
+    }
+
+    bool isWeb = kIsWeb;
+    bool isAdmin = email.trim().toLowerCase() == AppStrings.adminEmail;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -47,23 +55,24 @@ class MyAuthProvider with ChangeNotifier {
 
         Navigator.pop(context);
 
-        if (email.trim().toLowerCase() == AppStrings.adminEmail && kIsWeb) {
+        if (isWeb && isAdmin) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const AllAdminPage()),
           );
-        } else if (email.trim().toLowerCase() != AppStrings.adminEmail && !kIsWeb) {
+        } else if (!isWeb && !isAdmin) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const AllPages()),
           );
         } else {
-          _showSnackBar(context, 'Login failed. Please try again.');
+          _showSnackBar(context, 'Access denied.');
         }
       } else {
-        _showSnackBar(context, 'Login failed. Please try again.');
+        _showSnackBar(context, 'Email or password is incorrect. Please try again.');
       }
     } on FirebaseAuthException catch (e) {
       Navigator.pop(context);
       String errorMessage = _getErrorMessage(e);
+      print(e.code);
       _showSnackBar(context, errorMessage);
     }
   }
@@ -101,9 +110,15 @@ class MyAuthProvider with ChangeNotifier {
   String _getErrorMessage(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
-        return 'No user found for that email.';
-      case 'wrong-password':
-        return 'Incorrect password provided.';
+        return 'No user found with that email.';
+      case 'invalid-credential':
+        return 'Incorrect email or password. Please try again.';
+      case 'invalid-email':
+        return 'Invalid email format.';
+      case 'too-many-requests':
+        return 'Too many failed attempts. Try again later.';
+      case 'network-request-failed':
+        return 'Network error. Check your connection.';
       default:
         return 'Login failed. Please try again.';
     }

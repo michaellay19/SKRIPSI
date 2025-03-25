@@ -4,7 +4,7 @@ class LeaveRequest {
   final DateTime startDate;
   final DateTime endDate;
   final String reason;
-  final bool isApproved;
+  final String status;
 
   LeaveRequest({
     required this.id,
@@ -12,7 +12,7 @@ class LeaveRequest {
     required this.startDate,
     required this.endDate,
     required this.reason,
-    required this.isApproved,
+    required this.status,
   });
 }
 

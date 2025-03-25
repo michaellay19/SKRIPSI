@@ -40,12 +40,20 @@ class ProfileProvider with ChangeNotifier {
         _name = data['name'] ?? "User";
         _position = data['position'] ?? "-";
         _profileImage = data['profileImage'] ?? "";
-        _faceImage = data['faceImage'] ?? "";
       } else {
         _name = "User";
         _position = "-";
         _profileImage = '';
-        _faceImage = '';
+      }
+
+      if (!isAdmin) {
+        final faceDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+        if (faceDoc.exists && faceDoc.data() != null) {
+          final faceData = faceDoc.data() as Map<String, dynamic>;
+          _faceImage = faceData['faceImage'] ?? "";
+        } else {
+          _faceImage = "";
+        }
       }
 
       notifyListeners();

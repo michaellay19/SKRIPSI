@@ -20,7 +20,7 @@ class LeaveRequestProvider with ChangeNotifier {
         'startDate': request.startDate.toIso8601String(),
         'endDate': request.endDate.toIso8601String(),
         'reason': request.reason,
-        'isApproved': request.isApproved,
+        'status': request.status,
       });
 
       notifyListeners();
@@ -43,7 +43,7 @@ class LeaveRequestProvider with ChangeNotifier {
           startDate: DateTime.parse(data['startDate']),
           endDate: DateTime.parse(data['endDate']),
           reason: data['reason'],
-          isApproved: data['isApproved'] ?? false,
+          status: data['status'] ?? "Pending",
         );
       }).toList();
     });

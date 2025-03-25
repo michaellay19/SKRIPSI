@@ -13,7 +13,7 @@ class LeaveRequestForm extends StatefulWidget {
 class _LeaveRequestFormState extends State<LeaveRequestForm> {
   final _formKey = GlobalKey<FormState>();
   final _reasonController = TextEditingController();
-  String _selectedLeaveType = 'Medical Leave';
+  String _selectedLeaveType = 'Sick Leave';
   DateTime? _startDate;
   DateTime? _endDate;
 
@@ -21,7 +21,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
+      firstDate: DateTime.now(),
       lastDate: DateTime(2030),
     );
 
@@ -38,14 +38,16 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
 
   void _onsubmit() {
     if (_formKey.currentState!.validate()) {
+      DateTime finalEndDate = _selectedLeaveType == "Missed Punch Request" ? _startDate! : (_endDate ?? _startDate!);
+
       widget.onSubmit(
         LeaveRequest(
           id: '',
           leaveType: _selectedLeaveType,
           startDate: _startDate!,
-          endDate: _endDate!,
+          endDate: finalEndDate,
           reason: _reasonController.text,
-          isApproved: false,
+          status: "Pending",
         ),
       );
       Navigator.of(context).pop();
@@ -55,23 +57,25 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('New Leave Request'),
+      title: const Text('New Request'),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              _buildDropdown('Leave Type', _selectedLeaveType, (value) {
+              _buildDropdown('Request Type', _selectedLeaveType, (value) {
                 setState(() {
                   _selectedLeaveType = value!;
                 });
               }),
               const SizedBox(height: 16),
               _buildDateField('Start Date', _startDate, () => _pickDate(true), isStartDate: true),
+              if (_selectedLeaveType != "Missed Punch Request") ...[
+                const SizedBox(height: 16),
+                _buildDateField('End Date', _endDate, () => _pickDate(false)),
+              ],
               const SizedBox(height: 16),
-              _buildDateField('End Date', _endDate, () => _pickDate(false)),
-              const SizedBox(height: 16),
-              _buildTextField('Reason for Leave', _reasonController, maxLines: 3),
+              _buildTextField('Reason for Request', _reasonController, maxLines: 3),
             ],
           ),
         ),
@@ -89,8 +93,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {int maxLines = 1}) {
+  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -113,8 +116,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
     );
   }
 
-  Widget _buildDropdown(
-      String label, String value, ValueChanged<String?> onChanged) {
+  Widget _buildDropdown(String label, String value, ValueChanged<String?> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -122,7 +124,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
         const SizedBox(height: 5),
         DropdownButtonFormField<String>(
           value: value,
-          items: ['Medical Leave', 'Casual Leave', 'Annual Leave']
+          items: ['Sick Leave', 'Parental Leave', 'Unpaid Leave', 'Personal Leave', 'Missed Punch Request']
               .map((type) => DropdownMenuItem(value: type, child: Text(type)))
               .toList(),
           onChanged: onChanged,

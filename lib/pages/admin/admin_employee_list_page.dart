@@ -81,9 +81,9 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
             width: 600,
             child: Column(
               children: [
-                _buildField(controllers["name"]!, "Name", isRequired: true, isEditable: false),
-                _buildField(controllers["nik"]!, "NIK", isNik: true, isRequired: true, isEditable: false),
-                _buildField(controllers["email"]!, "Email", isRequired: true, isEditable: false),
+                _buildField(controllers["name"]!, "Name", isRequired: true),
+                _buildField(controllers["nik"]!, "NIK", isNik: true, isRequired: true),
+                _buildField(controllers["email"]!, "Email", isRequired: true, isEditable: isEditing ? false : true),
                 _buildField(controllers["gender"]!, "Gender"),
                 _buildField(controllers["dob"]!, "DOB", isDate: true),
                 _buildField(controllers["pob"]!, "Place of Birth"),
@@ -169,62 +169,6 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
       );
     }
   }
-
-  // void _showDeleteConfirmationDialog(Employee employee) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Text("Delete Employee"),
-  //       content: const Text("Are you sure you want to delete this employee?"),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context),
-  //           child: const Text("Cancel"),
-  //         ),
-  //         TextButton(
-  //           onPressed: () {
-  //             await _deleteEmployee(employee);
-  //             setState(() {
-  //               employees.remove(employee);
-  //               for (int i = 0; i < employees.length; i++) {
-  //                 employees[i] = employees[i].copyWith(no: (i + 1).toString().padLeft(4, '0'));
-  //               }
-  //             });
-  //             Navigator.pop(context);
-  //           },
-  //           child: const Text("Delete", style: TextStyle(color: Colors.red)),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  // Future<void> _deleteEmployee(Employee employee) async {
-  //   try {
-  //     final firestore = FirebaseFirestore.instance;
-  //     final auth = FirebaseAuth.instance;
-
-  //     await firestore.collection("users").doc(employee.uid).delete();
-
-  //     User? user = auth.currentUser;
-  //     print(user?.uid);
-  // if (user != null && user.uid == employee.uid) {
-  //   await user.delete();
-  // }
-
-  //     setState(() {
-  //       employees.removeWhere((e) => e.uid == employee.uid);
-
-  //       for (int i = 0; i < employees.length; i++) {
-  //         employees[i] = employees[i].copyWith(no: (i + 1).toString().padLeft(4, '0'));
-  //       }
-  //     });
-  //   } catch (e) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text("Error deleting employee: ${e.toString()}")),
-  //     );
-  //   }
-  // }
 
   void _showEmployeeDetails(Employee employee) {
     showDialog(
@@ -386,10 +330,6 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                                   IconButton(
                                     icon: const Icon(Icons.edit, color: Colors.blue),
                                     onPressed: () => _showEmployeeDialog(employee: employee),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () {},
                                   ),
                                 ],
                               )),

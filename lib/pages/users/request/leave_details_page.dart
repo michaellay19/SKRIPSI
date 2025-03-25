@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:skripsi/model/leave_request_model.dart';
 
 class LeaveDetailsPage extends StatelessWidget {
   final String leaveType;
   final DateTime startDate;
   final DateTime endDate;
   final String reason;
+  final String status;
 
   const LeaveDetailsPage({
     super.key,
@@ -12,6 +14,7 @@ class LeaveDetailsPage extends StatelessWidget {
     required this.startDate,
     required this.endDate,
     required this.reason,
+    required this.status,
   });
 
   @override
@@ -33,9 +36,10 @@ class LeaveDetailsPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow('Leave Type', leaveType),
-            _buildDetailRow('Start Date', startDate.toString().substring(0, 10)),
-            _buildDetailRow('End Date', endDate.toString().substring(0, 10)),
+            _buildDetailRow('Start Date', startDate.toFormattedString()),
+            _buildDetailRow('End Date', endDate.toFormattedString()),
             _buildDetailRow('Reason', reason),
+            _buildDetailRow('Status', status),
           ],
         ),
       ),
@@ -48,9 +52,7 @@ class LeaveDetailsPage extends StatelessWidget {
       child: Row(
         children: [
           Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(
-              child:
-                  Text(value, style: const TextStyle(color: Colors.black54))),
+          Expanded(child: Text(value, style: const TextStyle(color: Colors.black54))),
         ],
       ),
     );

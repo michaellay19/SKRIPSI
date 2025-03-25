@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/model/activity_tile_model.dart';
 import 'package:skripsi/model/attendance_card_model.dart';
@@ -16,10 +18,16 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  late double geofenceLatitude;
+  late double geofenceLongitude;
+  late double geofenceRadius;
+  bool isGeofenceLoaded = false;
+
   @override
   void initState() {
     super.initState();
     _checkUserFaceData();
+    _loadGeofenceData();
   }
 
   void _checkUserFaceData() async {
@@ -39,6 +47,76 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       });
+    }
+  }
+
+  Future<void> _loadGeofenceData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('geofence').doc('location').get();
+    if (doc.exists) {
+      setState(() {
+        geofenceLatitude = (doc['latitude'] as num).toDouble();
+        geofenceLongitude = (doc['longitude'] as num).toDouble();
+        geofenceRadius = (doc['radius'] as num).toDouble();
+        isGeofenceLoaded = true;
+      });
+    }
+  }
+
+  Future<bool> _isInsideGeofence() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permission denied. Please enable it in settings.')),
+        );
+        return false;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location permissions are permanently denied. Enable them in settings.')),
+      );
+      return false;
+    }
+
+    Position position = await Geolocator.getCurrentPosition();
+    double distance = Geolocator.distanceBetween(
+      position.latitude,
+      position.longitude,
+      geofenceLatitude,
+      geofenceLongitude,
+    );
+
+    print('distance: $position');
+
+    return distance <= geofenceRadius;
+  }
+
+  void _attemptClock(String activityType) async {
+    if (!isGeofenceLoaded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Geofence data not loaded. Please try again.')),
+      );
+      return;
+    }
+
+    bool insideGeofence = await _isInsideGeofence();
+    if (insideGeofence) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CameraPage(activityType: activityType),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You are outside the designated area!')),
+      );
     }
   }
 
@@ -187,14 +265,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CameraPage(activityType: 'Clock In'),
-                        ),
-                      );
-                    },
+                    onPressed: () => _attemptClock('Clock In'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -215,14 +286,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CameraPage(activityType: 'Clock Out'),
-                        ),
-                      );
-                    },
+                    onPressed: () => _attemptClock('Clock Out'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       padding: const EdgeInsets.symmetric(vertical: 16),

@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:skripsi/constants/app_colors.dart';
 
 class AdminAttendanceListPage extends StatefulWidget {
   const AdminAttendanceListPage({super.key});
@@ -10,36 +12,85 @@ class AdminAttendanceListPage extends StatefulWidget {
 class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
   DateTime selectedDate = DateTime.now();
   TextEditingController searchController = TextEditingController();
+  List<Map<String, dynamic>> attendanceList = [];
+  bool isLoading = true;
 
-  List<Map<String, String>> attendanceList = [
-    {
-      "no": "1",
-      "name": "Hendry",
-      "checkin": "08:00",
-      "checkout": "17:00",
-      "status": "Present",
-      "checkinPhoto": "assets/checkin1.jpg",
-      "checkoutPhoto": "assets/checkout1.jpg",
-    },
-    {
-      "no": "2",
-      "name": "Alvyn",
-      "checkin": "08:05",
-      "checkout": "17:10",
-      "status": "Present",
-      "checkinPhoto": "assets/checkin2.jpg",
-      "checkoutPhoto": "assets/checkout2.jpg",
-    },
-    {
-      "no": "3",
-      "name": "Michael",
-      "checkin": "-",
-      "checkout": "-",
-      "status": "Absent",
-      "checkinPhoto": "",
-      "checkoutPhoto": "",
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchAttendanceData();
+  }
+
+  Future<void> _fetchAttendanceData() async {
+    setState(() => isLoading = true);
+
+    try {
+      QuerySnapshot usersSnapshot = await FirebaseFirestore.instance.collection("users").get();
+
+      List<Map<String, dynamic>> tempAttendanceList = [];
+
+      String formattedSelectedDate =
+          "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+
+      for (var userDoc in usersSnapshot.docs) {
+        String uid = userDoc.id;
+
+        DocumentSnapshot profileSnapshot =
+            await FirebaseFirestore.instance.collection("users").doc(uid).collection("profile").doc(uid).get();
+
+        if (!profileSnapshot.exists) continue;
+
+        String no = profileSnapshot["no"];
+        String userName = profileSnapshot["name"];
+
+        QuerySnapshot attendanceSnapshot =
+            await FirebaseFirestore.instance.collection("users").doc(uid).collection("attendance").get();
+
+        Map<String, dynamic> attendanceData = {
+          "no": no,
+          "uid": uid,
+          "name": userName,
+          "checkin": "-",
+          "checkout": "-",
+          "checkinPhoto": "",
+          "checkoutPhoto": "",
+          "status": "Absent",
+        };
+
+        for (var attendanceDoc in attendanceSnapshot.docs) {
+          var data = attendanceDoc.data() as Map<String, dynamic>;
+          String activityType = data["activityType"];
+          String uploadedAt = data["uploadedAt"];
+          String url = data["url"] ?? "";
+          String recordDate = uploadedAt.split(" ")[0];
+
+          if (recordDate == formattedSelectedDate) {
+            if (activityType == "Clock In") {
+              attendanceData["checkin"] = uploadedAt;
+              attendanceData["checkinPhoto"] = url;
+              attendanceData["status"] = "Present";
+            } else if (activityType == "Clock Out") {
+              attendanceData["checkout"] = uploadedAt;
+              attendanceData["checkoutPhoto"] = url;
+            }
+          }
+        }
+        if (attendanceData["checkin"] != "-" || attendanceData["checkout"] != "-") {
+          tempAttendanceList.add(attendanceData);
+        }
+      }
+
+      setState(() {
+        attendanceList = tempAttendanceList;
+        isLoading = false;
+      });
+
+      print("Final attendance list: $attendanceList");
+    } catch (e) {
+      debugPrint("Error fetching attendance data: $e");
+      setState(() => isLoading = false);
+    }
+  }
 
   void _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -52,19 +103,22 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
       setState(() {
         selectedDate = picked;
       });
+      _fetchAttendanceData();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          _buildFilterSection(),
-          const SizedBox(height: 10),
-          Expanded(child: _buildDataTable()),
-        ],
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                _buildFilterSection(),
+                const SizedBox(height: 10),
+                Expanded(child: _buildDataTable()),
+              ],
+            ),
     );
   }
 
@@ -111,6 +165,8 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
           entry["name"]!.toLowerCase().contains(searchController.text.toLowerCase());
     }).toList();
 
+    print("Filtered Attendance List: ${filteredList.length}");
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: ConstrainedBox(
@@ -152,7 +208,7 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
     );
   }
 
-  Widget _buildViewPhotoButton(Map<String, String> entry) {
+  Widget _buildViewPhotoButton(Map<String, dynamic> entry) {
     return IconButton(
       icon: const Icon(Icons.photo),
       color: Colors.blue,
@@ -160,7 +216,7 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
     );
   }
 
-  void _showPhotoDialog(Map<String, String> entry) {
+  void _showPhotoDialog(Map<String, dynamic> entry) {
     showDialog(
       context: context,
       builder: (context) {
@@ -185,15 +241,15 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
     );
   }
 
-  Widget _buildPhotoSection(String label, String photoPath) {
+  Widget _buildPhotoSection(String label, String photoUrl) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 5),
-        photoPath.isNotEmpty
-            ? Image.asset(photoPath, height: 100, fit: BoxFit.cover)
-            : const Text("No photo available", style: TextStyle(color: Colors.grey)),
+        photoUrl.isNotEmpty
+            ? Image.network(photoUrl, height: 100, fit: BoxFit.cover)
+            : const Text("No photo available", style: TextStyle(color: AppColors.text2)),
       ],
     );
   }

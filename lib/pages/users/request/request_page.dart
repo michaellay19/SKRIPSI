@@ -5,13 +5,53 @@ import 'package:skripsi/model/leave_request_model.dart';
 import 'package:skripsi/pages/users/request/leave_request_form.dart';
 import 'package:skripsi/provider/request_provider.dart';
 
-class RequestPage extends StatelessWidget {
+class RequestPage extends StatefulWidget {
   const RequestPage({super.key});
+
+  @override
+  State<RequestPage> createState() => _RequestPageState();
+}
+
+class _RequestPageState extends State<RequestPage> {
+  bool _isDeleteMode = false;
+
+  void _toggleDeleteMode() {
+    setState(() {
+      _isDeleteMode = !_isDeleteMode;
+    });
+  }
 
   void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, LeaveRequest request) async {
+    final leaveRequestProvider = Provider.of<LeaveRequestProvider>(context, listen: false);
+
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Deletion"),
+        content: Text("Are you sure you want to delete the request for ${request.leaveType}?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await leaveRequestProvider.removeLeaveRequest(request.id);
+      _showSnackBar(context, "Leave request deleted successfully.");
+    }
   }
 
   @override
@@ -24,6 +64,12 @@ class RequestPage extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(_isDeleteMode ? Icons.check : Icons.delete, color: _isDeleteMode ? Colors.green : Colors.red),
+            onPressed: _toggleDeleteMode,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -46,13 +92,15 @@ class RequestPage extends StatelessWidget {
                     final request = leaveRequests[index];
                     return ListTile(
                       title: Text(request.leaveType),
-                      subtitle: Text(
-                          '${request.startDate.toString().substring(0, 10)} to ${request.endDate.toString().substring(0, 10)}'),
+                      subtitle: Text(_formatDate(request.startDate, request.endDate)),
                       trailing: IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.red),
+                        icon: _isDeleteMode
+                            ? const Icon(Icons.delete, color: Colors.red)
+                            : _getStatusIcon(request.status),
                         onPressed: () {
-                          leaveRequestProvider.removeLeaveRequest(request.id); 
-                          _showSnackBar(context, 'Leave request canceled successfully.');
+                          if (_isDeleteMode) {
+                            _confirmDelete(context, request);
+                          }
                         },
                       ),
                       onTap: () {
@@ -64,6 +112,7 @@ class RequestPage extends StatelessWidget {
                               startDate: request.startDate,
                               endDate: request.endDate,
                               reason: request.reason,
+                              status: request.status,
                             ),
                           ),
                         );
@@ -95,12 +144,29 @@ class RequestPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              child: const Text('Apply Leave',
-                  style: TextStyle(color: Colors.white, fontSize: 16)),
+              child: const Text('Apply Leave', style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Icon _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return const Icon(Icons.check_circle, color: Colors.green);
+      case 'rejected':
+        return const Icon(Icons.cancel, color: Colors.red);
+      default:
+        return const Icon(Icons.access_time_filled, color: Colors.orangeAccent);
+    }
+  }
+
+  String _formatDate(DateTime startDate, DateTime endDate) {
+    if (startDate.isAtSameMomentAs(endDate)) {
+      return startDate.toFormattedString();
+    }
+    return '${startDate.toFormattedString()} to ${endDate.toFormattedString()}';
   }
 }
