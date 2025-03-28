@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -10,6 +11,73 @@ class AdminHomePage extends StatefulWidget {
 
 class _AdminHomePageState extends State<AdminHomePage> {
   DateTime selectedDate = DateTime.now();
+  int presentCount = 0;
+  int absentCount = 0;
+  int timeOffCount = 0;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAttendanceData();
+  }
+
+  Future<void> fetchAttendanceData() async {
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
+    DateFormat dateFormat = DateFormat('yyyy-MM-dd');
+
+    String today = dateFormat.format(selectedDate);
+
+    try {
+      QuerySnapshot usersSnapshot = await firestore.collection('users').get();
+      int present = 0, absent = 0, timeOff = 0;
+
+      for (var userDoc in usersSnapshot.docs) {
+        String userId = userDoc.id;
+
+        QuerySnapshot attendanceSnapshot = await firestore
+            .collection('users')
+            .doc(userId)
+            .collection('attendance')
+            .where('uploadedAt', isEqualTo: today)
+            .get();
+
+        bool isPresent = attendanceSnapshot.docs.isNotEmpty;
+
+        QuerySnapshot leaveSnapshot = await firestore
+            .collection('users')
+            .doc(userId)
+            .collection('leave_requests')
+            .where('status', isEqualTo: "Approved")
+            .get();
+
+        bool isOnLeave = leaveSnapshot.docs.any((doc) {
+          DateTime startDate = DateTime.parse(doc['startDate']);
+          DateTime endDate = DateTime.parse(doc['endDate']);
+          return selectedDate.isAfter(startDate.subtract(const Duration(days: 1))) &&
+              selectedDate.isBefore(endDate.add(const Duration(days: 1)));
+        });
+
+        if (isOnLeave) {
+          timeOff++;
+        } else if (isPresent) {
+          present++;
+        } else {
+          absent++;
+        }
+      }
+
+      setState(() {
+        presentCount = present;
+        absentCount = absent;
+        timeOffCount = timeOff;
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error fetching data: $e");
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,46 +113,48 @@ class _AdminHomePageState extends State<AdminHomePage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _buildDashboardCard(
-                    title: "Present",
-                    value: "18",
-                    color: Colors.green,
-                    icon: Icons.check_circle,
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: _buildDashboardCard(
+                          title: "Present",
+                          value: presentCount.toString(),
+                          color: Colors.green,
+                          icon: Icons.check_circle,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildDashboardCard(
+                          title: "Absent",
+                          value: absentCount.toString(),
+                          color: Colors.red,
+                          icon: Icons.cancel,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildDashboardCard(
+                          title: "Time Off",
+                          value: timeOffCount.toString(),
+                          color: Colors.orange,
+                          icon: Icons.beach_access,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildDashboardCard(
-                    title: "Absent",
-                    value: "5",
-                    color: Colors.red,
-                    icon: Icons.cancel,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildDashboardCard(
-                    title: "Time Off",
-                    value: "2",
-                    color: Colors.orange,
-                    icon: Icons.beach_access,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
     );
   }
 

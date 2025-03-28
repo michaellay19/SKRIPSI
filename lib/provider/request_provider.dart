@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:skripsi/model/leave_request_model.dart';
 
 class LeaveRequestProvider with ChangeNotifier {
@@ -17,8 +18,8 @@ class LeaveRequestProvider with ChangeNotifier {
 
       await _firestore.collection('users').doc(_currentUserId).collection('leave_requests').add({
         'leaveType': request.leaveType,
-        'startDate': request.startDate.toIso8601String(),
-        'endDate': request.endDate.toIso8601String(),
+        'startDate': DateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS").format(request.startDate),
+        'endDate': DateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS").format(request.endDate),
         'reason': request.reason,
         'status': request.status,
       });
