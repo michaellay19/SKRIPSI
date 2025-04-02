@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:web/web.dart';
 
 Future<void> saveAndLaunchFile(List<int> bytes, String fileName) async {

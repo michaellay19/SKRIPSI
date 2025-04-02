@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:skripsi/model/save_file_web.dart';
+import 'package:skripsi/model/save_file_stub.dart' if (dart.library.html) 'package:skripsi/model/save_file_web.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Column, Row;
 
 class AdminAttendanceReportPage extends StatefulWidget {

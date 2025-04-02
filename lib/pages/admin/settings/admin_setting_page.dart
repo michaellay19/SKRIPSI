@@ -45,17 +45,6 @@ class _AdminSettingPageState extends State<AdminSettingPage> {
             },
           ),
           const Divider(),
-          SwitchListTile(
-            title: const Text("Dark Mode"),
-            secondary: const Icon(Icons.dark_mode),
-            value: isDarkMode,
-            onChanged: (bool value) {
-              setState(() {
-                isDarkMode = value;
-              });
-            },
-          ),
-          const Divider(),
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text("About App"),

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:skripsi/constants/app_colors.dart';
 
 class AdminAttendanceListPage extends StatefulWidget {
@@ -61,16 +62,17 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
           var data = attendanceDoc.data() as Map<String, dynamic>;
           String activityType = data["activityType"];
           String uploadedAt = data["uploadedAt"];
+          String formattedDate = DateFormat('HH:mm').format(DateTime.parse(uploadedAt));
           String url = data["url"] ?? "";
           String recordDate = uploadedAt.split(" ")[0];
 
           if (recordDate == formattedSelectedDate) {
             if (activityType == "Clock In") {
-              attendanceData["checkin"] = uploadedAt;
+              attendanceData["checkin"] = formattedDate;
               attendanceData["checkinPhoto"] = url;
               attendanceData["status"] = "Present";
             } else if (activityType == "Clock Out") {
-              attendanceData["checkout"] = uploadedAt;
+              attendanceData["checkout"] = formattedDate;
               attendanceData["checkoutPhoto"] = url;
             }
           }

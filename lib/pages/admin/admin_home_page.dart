@@ -67,6 +67,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
         }
       }
 
+      if (!mounted) return;
+
       setState(() {
         presentCount = present;
         absentCount = absent;
