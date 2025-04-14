@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/model/leave_request_model.dart';
 
 class LeaveRequestForm extends StatefulWidget {
@@ -161,7 +162,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.blue),
+                      border: Border.all(color: AppColors.primary),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
@@ -177,7 +178,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
                         const Spacer(),
                         const Icon(
                           Icons.calendar_today,
-                          color: Colors.blue,
+                          color: AppColors.primary,
                         ),
                       ],
                     ),

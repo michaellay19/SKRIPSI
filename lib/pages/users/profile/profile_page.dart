@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/pages/users/profile/change_password_page.dart';
 import 'package:skripsi/pages/users/profile/personal_info_page.dart';
 import 'package:skripsi/pages/users/profile/terms_and_conditions_page.dart';
@@ -74,7 +75,8 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        backgroundColor: Colors.blue,
+        backgroundColor: AppColors.primary,
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -85,7 +87,7 @@ class _ProfilePageState extends State<ProfilePage> {
               backgroundImage:
                   profileProvider.profileImage.isNotEmpty ? NetworkImage(profileProvider.profileImage) : null,
               child: profileProvider.profileImage.isEmpty
-                  ? const Icon(Icons.admin_panel_settings, size: 40, color: Colors.blueAccent)
+                  ? const Icon(Icons.admin_panel_settings, size: 40, color: AppColors.primary)
                   : null,
             ),
             const SizedBox(height: 10),
@@ -101,7 +103,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ElevatedButton(
               onPressed: _editProfilePicture,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -158,7 +160,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildMenuOption(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Colors.blue),
+      leading: Icon(icon, color: AppColors.primary),
       title: Text(title, style: const TextStyle(fontSize: 16)),
       onTap: onTap,
     );

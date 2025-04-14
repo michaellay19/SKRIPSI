@@ -18,7 +18,7 @@ class _AdminAttendanceReportPageState extends State<AdminAttendanceReportPage> {
   final List<String> months = [
     "All",
     "January",
-    "February",
+    "February", 
     "March",
     "April",
     "May",

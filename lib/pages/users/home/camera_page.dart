@@ -34,9 +34,10 @@ class CameraPageState extends State<CameraPage> {
   List<Face> detectedFaces = [];
   Timer? _debounceTimer;
   List<bool> livenessFrames = [];
-  List<bool> eyeOpenStates = [];
-  List<bool> smileStates = [];
-  List<double> headAngles = [];
+  bool _hasBlinked = false;
+  bool _hasSmiled = false;
+  bool _hasMovedHead = false;
+  DateTime? _lastActionTime;
 
   @override
   void initState() {
@@ -46,7 +47,7 @@ class CameraPageState extends State<CameraPage> {
       enableClassification: true,
       enableContours: true,
       enableTracking: true,
-      performanceMode: FaceDetectorMode.accurate,
+      performanceMode: FaceDetectorMode.fast,
     ));
     _initializeCamera();
   }
@@ -120,99 +121,77 @@ class CameraPageState extends State<CameraPage> {
     });
   }
 
-  bool detectBlink(List<Face> faces) {
-    if (faces.isEmpty) return false;
-
-    Face face = faces.first;
-    double leftEyeOpen = face.leftEyeOpenProbability ?? 1.0;
-    double rightEyeOpen = face.rightEyeOpenProbability ?? 1.0;
-
-    if (eyeOpenStates.length >= 5) {
-      eyeOpenStates.removeAt(0);
-    }
-    eyeOpenStates.add(leftEyeOpen > 0.6 && rightEyeOpen > 0.6);
-
-    if (eyeOpenStates.length >= 3 &&
-        eyeOpenStates[0] == true &&
-        eyeOpenStates[1] == false &&
-        eyeOpenStates[2] == true) {
-      print("✅ Blink detected!");
-      return true;
-    }
-    return false;
-  }
-
-  bool detectSmile(List<Face> faces) {
-    if (faces.isEmpty) return false;
-
-    Face face = faces.first;
-    double smileProb = face.smilingProbability ?? 0.0;
-
-    if (smileStates.length >= 5) {
-      smileStates.removeAt(0);
-    }
-    smileStates.add(smileProb > 0.4);
-
-    if (smileStates.where((s) => s).length >= 3) {
-      print("✅ Smile detected!");
-      return true;
-    }
-    return false;
-  }
-
-  bool detectHeadMovement(List<Face> faces) {
-    if (faces.isEmpty) return false;
-
-    Face face = faces.first;
-    double headY = face.headEulerAngleY ?? 0.0;
-    double headZ = face.headEulerAngleZ ?? 0.0;
-
-    if (headAngles.length >= 5) {
-      headAngles.removeAt(0);
-    }
-    headAngles.add((headY.abs() + headZ.abs()) / 2);
-
-    if (headAngles.length >= 3 && (headAngles.last - headAngles.first).abs() > 15) {
-      print("✅ Head movement detected!");
-      return true;
-    }
-    return false;
-  }
-
-  bool detectFakeFace(Face face) {
-    if (face.contours[FaceContourType.face] == null || face.contours[FaceContourType.face]!.points.isEmpty) {
-      print("⚠️ No contour data available. Cannot determine if face is fake.");
+  bool checkLiveness(List<Face> faces) {
+    if (faces.isEmpty) {
+      // Reset if no face detected
+      _resetLiveness();
       return false;
     }
 
-    if (face.contours[FaceContourType.face]!.points.length < 10) {
-      print("❌ Fake face detected! (Photo/Action Figure)");
-      return true;
+    final face = faces.first;
+
+    if (detectFakeFace(face)) {
+      _resetLiveness();
+      return false;
     }
-    return false;
+
+    if (!_hasBlinked && _checkBlink(face)) {
+      _hasBlinked = true;
+      _lastActionTime = DateTime.now();
+      print("✅ Blink detected!");
+    }
+
+    if (!_hasSmiled && _checkSmile(face)) {
+      _hasSmiled = true;
+      _lastActionTime = DateTime.now();
+      print("✅ Smile detected!");
+    }
+
+    if (!_hasMovedHead && _checkHeadMovement(face)) {
+      _hasMovedHead = true;
+      _lastActionTime = DateTime.now();
+      print("✅ Head movement detected!");
+    }
+
+    final actionsCompleted = [_hasBlinked, _hasSmiled, _hasMovedHead].where((x) => x).length;
+
+    // Reset if no action for 5 seconds
+    if (_lastActionTime != null && DateTime.now().difference(_lastActionTime!) > Duration(seconds: 5)) {
+      _resetLiveness();
+      return false;
+    }
+
+    return actionsCompleted >= 2;
   }
 
-  bool checkLiveness(List<Face> faces) {
-    if (faces.isEmpty) return false;
+  void _resetLiveness() {
+    _hasBlinked = false;
+    _hasSmiled = false;
+    _hasMovedHead = false;
+    _lastActionTime = null;
+  }
 
-    Face face = faces.first;
-    bool blinked = detectBlink(faces);
-    bool smiled = detectSmile(faces);
-    bool movedHead = detectHeadMovement(faces);
-    bool isFake = detectFakeFace(face);
+  bool _checkBlink(Face face) {
+    final leftEyeOpen = face.leftEyeOpenProbability ?? 1.0;
+    final rightEyeOpen = face.rightEyeOpenProbability ?? 1.0;
 
-    if (isFake) return false;
+    return leftEyeOpen < 0.3 && rightEyeOpen < 0.3;
+  }
 
-    int liveActions = [blinked, smiled, movedHead].where((x) => x).length;
+  bool _checkSmile(Face face) {
+    final smileProb = face.smilingProbability ?? 0.0;
+    return smileProb > 0.5;
+  }
 
-    if (liveActions > 0) {
-      livenessFrames.add(true);
-      if (livenessFrames.length > 5) {
-        livenessFrames.removeAt(0);
-      }
-    }
+  bool _checkHeadMovement(Face face) {
+    final headY = face.headEulerAngleY?.abs() ?? 0.0;
+    final headZ = face.headEulerAngleZ?.abs() ?? 0.0;
 
-    return livenessFrames.where((frame) => frame).length >= 2;
+    return headY > 15 || headZ > 15;
+  }
+
+  bool detectFakeFace(Face face) {
+    return face.contours[FaceContourType.face]!.points.length < 5;
   }
 
   void _captureAndDetectFace() async {
@@ -223,9 +202,12 @@ class CameraPageState extends State<CameraPage> {
       return;
     }
 
-    if (livenessFrames.where((frame) => frame).length < 2) {
+    if (!(_hasBlinked && _hasSmiled) && !(_hasBlinked && _hasMovedHead) && !(_hasSmiled && _hasMovedHead)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Liveness check failed! Blink, Smile, or Move Head.")),
+        const SnackBar(
+          content: Text("Perform 2 of these: blink, smile, or move head"),
+          duration: Duration(seconds: 2),
+        ),
       );
       return;
     }
@@ -431,8 +413,35 @@ class CameraPageState extends State<CameraPage> {
               ),
             ),
           ),
+          Positioned(
+            top: 50,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildActionIndicator("Blink", _hasBlinked),
+                SizedBox(width: 10),
+                _buildActionIndicator("Smile", _hasSmiled),
+                SizedBox(width: 10),
+                _buildActionIndicator("Move", _hasMovedHead),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionIndicator(String label, bool completed) {
+    return Column(
+      children: [
+        Icon(
+          completed ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: completed ? Colors.green : Colors.grey,
+        ),
+        Text(label),
+      ],
     );
   }
 }

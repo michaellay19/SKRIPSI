@@ -27,13 +27,16 @@ class MyAuthProvider with ChangeNotifier {
   String get adminEmail => AppStrings.adminEmail;
 
   Future<void> signIn(String email, String password, BuildContext context) async {
-    if (email.trim().isEmpty || password.trim().isEmpty) {
+    String trimmedEmail = email.trim();
+    String trimmedPassword = password.trim();
+
+    if (trimmedEmail.isEmpty || trimmedPassword.isEmpty) {
       _showSnackBar(context, 'Please enter both email and password.');
       return;
     }
 
     bool isWeb = kIsWeb;
-    bool isAdmin = email.trim().toLowerCase() == AppStrings.adminEmail;
+    bool isAdmin = trimmedEmail.toLowerCase() == AppStrings.adminEmail;
 
     showDialog(
       context: context,
@@ -43,17 +46,17 @@ class MyAuthProvider with ChangeNotifier {
 
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password.trim(),
+        email: trimmedEmail,
+        password: trimmedPassword,
       );
+
+      Navigator.pop(context);
 
       if (userCredential.user != null) {
         _user = userCredential.user;
         notifyListeners();
 
-        await _saveUserLocally(email.trim());
-
-        Navigator.pop(context);
+        await _saveUserLocally(trimmedEmail);
 
         if (isWeb && isAdmin) {
           Navigator.of(context).pushReplacement(
@@ -72,8 +75,12 @@ class MyAuthProvider with ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       Navigator.pop(context);
       String errorMessage = _getErrorMessage(e);
-      print(e.code);
+      debugPrint(e.toString());
       _showSnackBar(context, errorMessage);
+    } catch (e) {
+      Navigator.pop(context);
+      debugPrint("Unexpected error: $e");
+      _showSnackBar(context, 'An unexpected error occurred. Please try again.');
     }
   }
 

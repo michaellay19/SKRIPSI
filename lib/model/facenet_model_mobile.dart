@@ -30,7 +30,7 @@ class FaceNetModel {
     img.Image? image = img.decodeImage(imageFile.readAsBytesSync());
     if (image == null) return [];
 
-    img.Image resizedImage = img.copyResize(image, width: 160, height: 160);
+    img.Image resizedImage = img.copyResizeCropSquare(image, size: 160);
     Float32List input = _imageToFloat32(resizedImage);
 
     var output = List.filled(_outputShape[1], 0.0).reshape([1, _outputShape[1]]);
@@ -43,21 +43,29 @@ class FaceNetModel {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return false;
 
-    final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
-    if (!doc.exists || !doc.data()!.containsKey('faceEmbeddings')) {
-      print("No face data found for user.");
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+      if (!doc.exists || !doc.data()!.containsKey('faceEmbeddings')) {
+        print("No face data found for user.");
+        return false;
+      }
+      List<dynamic> storedEmbeddings = doc.get('faceEmbeddings');
+      List<double> storedEmbeddingsList = storedEmbeddings.map((e) => e as double).toList();
+      List<double> newEmbeddings = runFaceNet(capturedImage);
+
+      if (newEmbeddings.isEmpty) {
+        print("No face detected in the image.");
+        return false;
+      }
+
+      double similarity = cosineSimilarity(storedEmbeddingsList, newEmbeddings);
+      print("Face similarity score: $similarity");
+
+      return similarity > 0.8;
+    } catch (e) {
+      print("Error fetching face data: $e");
       return false;
     }
-
-    List<dynamic> storedEmbeddings = doc.get('faceEmbeddings');
-    List<double> storedEmbeddingsList = storedEmbeddings.map((e) => e as double).toList();
-
-    List<double> newEmbeddings = runFaceNet(capturedImage);
-
-    double similarity = cosineSimilarity(storedEmbeddingsList, newEmbeddings);
-    print("Face similarity score: $similarity");
-
-    return similarity > 0.8;
   }
 
   double cosineSimilarity(List<double> a, List<double> b) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/pages/users/request/leave_details_page.dart';
 import 'package:skripsi/model/leave_request_model.dart';
 import 'package:skripsi/pages/users/request/leave_request_form.dart';
@@ -138,7 +139,7 @@ class _RequestPageState extends State<RequestPage> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),

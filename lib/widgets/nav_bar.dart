@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skripsi/constants/app_colors.dart';
 
 class NaviBar extends StatelessWidget {
   final int selectedIndex;
@@ -33,7 +34,7 @@ class NaviBar extends StatelessWidget {
           ],
           currentIndex: selectedIndex,
           onTap: onItemTapped,
-          selectedItemColor: Colors.blue,
+          selectedItemColor: AppColors.primary,
           iconSize: 30.0,
           selectedFontSize: 14.0,
           unselectedFontSize: 12.0,

@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/model/activity_tile_model.dart';
 import 'package:skripsi/model/attendance_card_model.dart';
 import 'package:skripsi/model/leave_request_model.dart';
@@ -22,6 +24,7 @@ class _HomePageState extends State<HomePage> {
   late double geofenceLongitude;
   late double geofenceRadius;
   bool isGeofenceLoaded = false;
+  DateTime selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
   @override
   void initState() {
@@ -144,6 +147,18 @@ class _HomePageState extends State<HomePage> {
     return hour < 17 ? "Early Clock Out" : "Go Home";
   }
 
+  Map<String, List<Map<String, dynamic>>> _groupActivitiesByDate(List<Map<String, dynamic>> activities) {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var activity in activities) {
+      final date = activity['date'];
+      if (!grouped.containsKey(date)) {
+        grouped[date] = [];
+      }
+      grouped[date]!.add(activity);
+    }
+    return grouped;
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
@@ -160,7 +175,7 @@ class _HomePageState extends State<HomePage> {
               radius: 24,
               backgroundImage: profileProvider.profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
               child: profileProvider.profileImage.isEmpty
-                  ? const Icon(Icons.admin_panel_settings, size: 40, color: Colors.blueAccent)
+                  ? const Icon(Icons.admin_panel_settings, size: 40, color: AppColors.primary)
                   : null,
             ),
             const SizedBox(width: 12),
@@ -267,7 +282,7 @@ class _HomePageState extends State<HomePage> {
                   child: ElevatedButton(
                     onPressed: () => _attemptClock('Clock In'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -307,12 +322,106 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 24),
-            const Text(
-              "Your Activity",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Your Activity",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () async {
+                    final selected = await showDialog<DateTime>(
+                      context: context,
+                      builder: (context) {
+                        int tempMonth = selectedMonth.month;
+                        int tempYear = selectedMonth.year;
+                        return AlertDialog(
+                          title: Text(
+                            'Select Month and Year',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          content: Row(
+                            children: [
+                              Expanded(
+                                child: StatefulBuilder(
+                                  builder: (context, setState) {
+                                    return DropdownButton<int>(
+                                      isExpanded: true,
+                                      value: tempMonth,
+                                      items: List.generate(12, (index) {
+                                        return DropdownMenuItem(
+                                          value: index + 1,
+                                          child: Text(DateFormat.MMMM().format(DateTime(0, index + 1))),
+                                        );
+                                      }),
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          setState(() {
+                                            tempMonth = value;
+                                          });
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: StatefulBuilder(
+                                  builder: (context, setState) {
+                                    return DropdownButton<int>(
+                                      isExpanded: true,
+                                      value: tempYear,
+                                      items: List.generate(5, (index) {
+                                        final year = DateTime.now().year - index;
+                                        return DropdownMenuItem(
+                                          value: year,
+                                          child: Text(year.toString()),
+                                        );
+                                      }),
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          setState(() {
+                                            tempYear = value;
+                                          });
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(DateTime(tempYear, tempMonth));
+                              },
+                              child: const Text('Confirm'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (selected != null) {
+                      setState(() {
+                        selectedMonth = DateTime(selected.year, selected.month);
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.date_range),
+                  label: Text(DateFormat('MMMM yyyy').format(selectedMonth)),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -337,19 +446,52 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   }
+
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Center(child: Text('No activities recorded yet.'));
                   }
 
-                  final activities = snapshot.data!;
+                  final activities = snapshot.data!.where((activity) {
+                    final parts = activity['date'].split('-');
+                    if (parts.length == 3) {
+                      final activityMonth = int.parse(parts[1]);
+                      final activityYear = int.parse(parts[2]);
+                      return activityMonth == selectedMonth.month && activityYear == selectedMonth.year;
+                    }
+                    return false;
+                  }).toList();
+
+                  final groupedActivities = _groupActivitiesByDate(activities);
+
+                  final sortedKeys = groupedActivities.keys.toList()
+                    ..sort((a, b) {
+                      final aDate = DateTime.parse('${a.split('-')[2]}-${a.split('-')[1]}-${a.split('-')[0]}');
+                      final bDate = DateTime.parse('${b.split('-')[2]}-${b.split('-')[1]}-${b.split('-')[0]}');
+                      return bDate.compareTo(aDate);
+                    });
+
                   return ListView.builder(
-                    itemCount: activities.length,
+                    itemCount: sortedKeys.length,
                     itemBuilder: (context, index) {
-                      final activity = activities[index];
-                      return ActivityTile(
-                        title: activity['activityType'] ?? 'Unknown',
-                        time: activity['time'],
-                        date: activity['date'],
+                      final date = sortedKeys[index];
+                      final items = groupedActivities[date]!;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            date,
+                            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                          ),
+                          const Divider(thickness: 1),
+                          ...items.map((activity) {
+                            return ActivityTile(
+                              title: activity['activityType'] ?? 'Unknown',
+                              time: activity['time'],
+                              date: activity['date'],
+                            );
+                          }).toList(),
+                          const SizedBox(height: 12),
+                        ],
                       );
                     },
                   );

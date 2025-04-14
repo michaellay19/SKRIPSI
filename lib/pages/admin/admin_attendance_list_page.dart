@@ -51,10 +51,10 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
           "no": no,
           "uid": uid,
           "name": userName,
-          "checkin": "-",
-          "checkout": "-",
-          "checkinPhoto": "",
-          "checkoutPhoto": "",
+          "clockin": "-",
+          "clockout": "-",
+          "clockinPhoto": "",
+          "clockoutPhoto": "",
           "status": "Absent",
         };
 
@@ -68,16 +68,16 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
 
           if (recordDate == formattedSelectedDate) {
             if (activityType == "Clock In") {
-              attendanceData["checkin"] = formattedDate;
-              attendanceData["checkinPhoto"] = url;
+              attendanceData["clockin"] = formattedDate;
+              attendanceData["clockinPhoto"] = url;
               attendanceData["status"] = "Present";
             } else if (activityType == "Clock Out") {
-              attendanceData["checkout"] = formattedDate;
-              attendanceData["checkoutPhoto"] = url;
+              attendanceData["clockout"] = formattedDate;
+              attendanceData["clockoutPhoto"] = url;
             }
           }
         }
-        if (attendanceData["checkin"] != "-" || attendanceData["checkout"] != "-") {
+        if (attendanceData["clockin"] != "-" || attendanceData["clockout"] != "-") {
           tempAttendanceList.add(attendanceData);
         }
       }
@@ -87,7 +87,6 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
         isLoading = false;
       });
 
-      print("Final attendance list: $attendanceList");
     } catch (e) {
       debugPrint("Error fetching attendance data: $e");
       setState(() => isLoading = false);
@@ -167,8 +166,6 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
           entry["name"]!.toLowerCase().contains(searchController.text.toLowerCase());
     }).toList();
 
-    print("Filtered Attendance List: ${filteredList.length}");
-
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: ConstrainedBox(
@@ -178,8 +175,8 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
           columns: const [
             DataColumn(label: Text("No")),
             DataColumn(label: Text("Name")),
-            DataColumn(label: Text("Check-in")),
-            DataColumn(label: Text("Check-out")),
+            DataColumn(label: Text("Clock-in")),
+            DataColumn(label: Text("Clock-out")),
             DataColumn(label: Text("Status")),
             DataColumn(label: Text("Action")),
           ],
@@ -187,8 +184,8 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
               .map((entry) => DataRow(cells: [
                     DataCell(Text(entry["no"]!)),
                     DataCell(Text(entry["name"]!)),
-                    DataCell(Text(entry["checkin"]!)),
-                    DataCell(Text(entry["checkout"]!)),
+                    DataCell(Text(entry["clockin"]!)),
+                    DataCell(Text(entry["clockout"]!)),
                     DataCell(_buildStatusBadge(entry["status"]!)),
                     DataCell(_buildViewPhotoButton(entry)),
                   ]))
@@ -227,9 +224,9 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildPhotoSection("Check-in", entry["checkinPhoto"]!),
+              _buildPhotoSection("Clock-in", entry["clockinPhoto"]!),
               const SizedBox(height: 10),
-              _buildPhotoSection("Check-out", entry["checkoutPhoto"]!),
+              _buildPhotoSection("Clock-out", entry["clockoutPhoto"]!),
             ],
           ),
           actions: [
