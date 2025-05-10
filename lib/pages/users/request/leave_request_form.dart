@@ -39,7 +39,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
 
   void _onsubmit() {
     if (_formKey.currentState!.validate()) {
-      DateTime finalEndDate = _selectedLeaveType == "Missed Punch Request" ? _startDate! : (_endDate ?? _startDate!);
+      DateTime finalEndDate = _selectedLeaveType == "Attendance Request" ? _startDate! : (_endDate ?? _startDate!);
 
       widget.onSubmit(
         LeaveRequest(
@@ -71,7 +71,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
               }),
               const SizedBox(height: 16),
               _buildDateField('Start Date', _startDate, () => _pickDate(true), isStartDate: true),
-              if (_selectedLeaveType != "Missed Punch Request") ...[
+              if (_selectedLeaveType != "Attendance Request") ...[
                 const SizedBox(height: 16),
                 _buildDateField('End Date', _endDate, () => _pickDate(false)),
               ],
@@ -125,7 +125,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
         const SizedBox(height: 5),
         DropdownButtonFormField<String>(
           value: value,
-          items: ['Sick Leave', 'Parental Leave', 'Unpaid Leave', 'Personal Leave', 'Missed Punch Request']
+          items: ['Sick Leave', 'Parental Leave', 'Unpaid Leave', 'Personal Leave', 'Attendance Request']
               .map((type) => DropdownMenuItem(value: type, child: Text(type)))
               .toList(),
           onChanged: onChanged,

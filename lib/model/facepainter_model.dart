@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
 class FacePainter extends CustomPainter {
-  FacePainter(this.faces, this.imageSize, {this.isFrontCamera = true});
+  FacePainter(this.faces, this.imageSize, {this.sensorOrientation = 0, this.isFrontCamera = true});
 
   final List<Face> faces;
   final Size imageSize;
+  final int sensorOrientation;
   final bool isFrontCamera;
 
   @override
@@ -15,30 +16,31 @@ class FacePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0;
 
-    double scaleX = size.width / imageSize.width;
-    double scaleY = size.height / imageSize.height;
+    double scaleX, scaleY;
 
-    for (var face in faces) {
-      Rect rect = face.boundingBox;
-      
-      double left = rect.left * scaleX;
-      double top = rect.top * scaleY;
-      double right = rect.right * scaleX;
-      double bottom = rect.bottom * scaleY;
+    if (sensorOrientation == 90 || sensorOrientation == 270) {
+      scaleX = size.width / imageSize.height;
+      scaleY = size.height / imageSize.width;
+    } else {
+      scaleX = size.width / imageSize.width;
+      scaleY = size.height / imageSize.height;
+    }
 
-      if (isFrontCamera) {
-        double tempLeft = left;
+    for (final face in faces) {
+      Rect bbox = face.boundingBox;
+
+      double left = bbox.left * scaleX;
+      double top = bbox.top * scaleY;
+      double right = bbox.right * scaleX;
+      double bottom = bbox.bottom * scaleY;
+
+      if (isFrontCamera && sensorOrientation != 90) {
+        final double tempLeft = left;
         left = size.width - right;
         right = size.width - tempLeft;
       }
 
-      left = left.clamp(0, size.width);
-      right = right.clamp(0, size.width);
-      top = top.clamp(0, size.height);
-      bottom = bottom.clamp(0, size.height);
-
-      Rect scaledRect = Rect.fromLTRB(left, top, right, bottom);
-
+      final Rect scaledRect = Rect.fromLTRB(left, top, right, bottom);
       canvas.drawRect(scaledRect, paint);
     }
   }

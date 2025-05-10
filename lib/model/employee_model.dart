@@ -4,7 +4,15 @@ class Employee {
   final String name;
   final String nik;
   final String email;
-  final String? gender, dob, pob, position, religion, address, employeeStatus, joinDate, phone;
+  final String gender;
+  final String dob;
+  final String pob;
+  final String position;
+  final String religion;
+  final String address;
+  final String employeeStatus;
+  final String joinDate;
+  final String phone;
 
   Employee({
     required this.uid,
@@ -12,15 +20,15 @@ class Employee {
     required this.name,
     required this.nik,
     required this.email,
-    this.gender,
-    this.dob,
-    this.pob,
-    this.position,
-    this.religion,
-    this.address,
-    this.employeeStatus,
-    this.joinDate,
-    this.phone,
+    required this.gender,
+    required this.dob,
+    required this.pob,
+    required this.position,
+    required this.religion,
+    required this.address,
+    required this.employeeStatus,
+    required this.joinDate,
+    required this.phone,
   });
 
   Employee copyWith({

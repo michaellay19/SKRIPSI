@@ -53,6 +53,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
   }
 
   void _showEmployeeDialog({Employee? employee}) {
+    final formKey = GlobalKey<FormState>();
     final isEditing = employee != null;
     final controllers = {
       for (var field in [
@@ -65,8 +66,8 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         "position",
         "religion",
         "address",
-        "employee_status",
-        "join_date",
+        "employeeStatus",
+        "joinDate",
         "phone"
       ])
         field: TextEditingController(text: employee != null ? employee.toMap()[field] : ""),
@@ -79,21 +80,24 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         content: SingleChildScrollView(
           child: SizedBox(
             width: 600,
-            child: Column(
-              children: [
-                _buildField(controllers["name"]!, "Name", isRequired: true),
-                _buildField(controllers["nik"]!, "NIK", isNik: true, isRequired: true),
-                _buildField(controllers["email"]!, "Email", isRequired: true, isEditable: isEditing ? false : true),
-                _buildField(controllers["gender"]!, "Gender"),
-                _buildField(controllers["dob"]!, "DOB", isDate: true),
-                _buildField(controllers["pob"]!, "Place of Birth"),
-                _buildField(controllers["position"]!, "Position"),
-                _buildField(controllers["religion"]!, "Religion"),
-                _buildField(controllers["address"]!, "Address"),
-                _buildField(controllers["employee_status"]!, "Employee Status"),
-                _buildField(controllers["join_date"]!, "Join Date", isDate: true),
-                _buildField(controllers["phone"]!, "Phone"),
-              ],
+            child: Form(
+              key: formKey,
+              child: Column(
+                children: [
+                  _buildField(controllers["name"]!, "Name", isRequired: true),
+                  _buildField(controllers["nik"]!, "NIK", isNik: true, isRequired: true),
+                  _buildField(controllers["email"]!, "Email", isRequired: true, isEditable: isEditing ? false : true),
+                  _buildField(controllers["gender"]!, "Gender"),
+                  _buildField(controllers["dob"]!, "DOB", isDate: true),
+                  _buildField(controllers["pob"]!, "Place of Birth"),
+                  _buildField(controllers["position"]!, "Position"),
+                  _buildField(controllers["religion"]!, "Religion"),
+                  _buildField(controllers["address"]!, "Address"),
+                  _buildField(controllers["employeeStatus"]!, "Employee Status"),
+                  _buildField(controllers["joinDate"]!, "Join Date", isDate: true),
+                  _buildField(controllers["phone"]!, "Phone"),
+                ],
+              ),
             ),
           ),
         ),
@@ -103,7 +107,11 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
             child: const Text("Cancel"),
           ),
           ElevatedButton(
-            onPressed: () => _saveEmployee(controllers, isEditing, employee),
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                _saveEmployee(controllers, isEditing, employee);
+              }
+            },
             child: const Text("Save"),
           ),
         ],
@@ -127,9 +135,11 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         uid = employee!.uid;
       }
 
-      await firestore.collection("users").doc(uid).set({
-        "createdAt": FieldValue.serverTimestamp(),
-      });
+        if (!isEditing) {
+        await firestore.collection("users").doc(uid).set({
+          "createdAt": FieldValue.serverTimestamp(),
+        });
+      }
 
       final employeeData = Employee(
         uid: uid,
@@ -143,8 +153,8 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         position: controllers["position"]!.text,
         religion: controllers["religion"]!.text,
         address: controllers["address"]!.text,
-        employeeStatus: controllers["employee_status"]!.text,
-        joinDate: controllers["join_date"]!.text,
+        employeeStatus: controllers["employeeStatus"]!.text,
+        joinDate: controllers["joinDate"]!.text,
         phone: controllers["phone"]!.text,
       );
 
@@ -192,14 +202,14 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                   _buildDetailItem(Icons.person, "Name", employee.name),
                   _buildDetailItem(Icons.email, "Email", employee.email),
                   _buildDetailItem(Icons.credit_card, "NIK", employee.nik),
-                  _buildDetailItem(Icons.male, "Gender", employee.gender ?? "-"),
-                  _buildDetailItem(Icons.cake, "DOB", employee.dob ?? "-"),
-                  _buildDetailItem(Icons.location_on, "Place of Birth", employee.pob ?? "-"),
-                  _buildDetailItem(Icons.work, "Position", employee.position ?? "-"),
-                  _buildDetailItem(Icons.location_city, "Address", employee.address ?? "-"),
-                  _buildDetailItem(Icons.check_circle, "Employee Status", employee.employeeStatus ?? "-"),
-                  _buildDetailItem(Icons.date_range, "Join Date", employee.joinDate ?? "-"),
-                  _buildDetailItem(Icons.phone, "Phone", employee.phone ?? "-"),
+                  _buildDetailItem(Icons.male, "Gender", employee.gender),
+                  _buildDetailItem(Icons.cake, "DOB", employee.dob),
+                  _buildDetailItem(Icons.location_on, "Place of Birth", employee.pob),
+                  _buildDetailItem(Icons.work, "Position", employee.position),
+                  _buildDetailItem(Icons.location_city, "Address", employee.address),
+                  _buildDetailItem(Icons.check_circle, "Employee Status", employee.employeeStatus),
+                  _buildDetailItem(Icons.date_range, "Join Date", employee.joinDate),
+                  _buildDetailItem(Icons.phone, "Phone", employee.phone),
                 ],
               ),
             ),

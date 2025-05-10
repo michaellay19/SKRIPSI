@@ -27,6 +27,7 @@ class CameraPage extends StatefulWidget {
 
 class CameraPageState extends State<CameraPage> {
   CameraController? _controller;
+  CameraLensDirection cameraDirection = CameraLensDirection.front;
   Future<void>? _initializeControllerFuture;
   FaceNetModel faceNet = FaceNetModel();
   late FaceDetector _faceDetector;
@@ -38,6 +39,7 @@ class CameraPageState extends State<CameraPage> {
   bool _hasSmiled = false;
   bool _hasMovedHead = false;
   DateTime? _lastActionTime;
+  late bool isFrontCamera;
 
   @override
   void initState() {
@@ -47,7 +49,6 @@ class CameraPageState extends State<CameraPage> {
       enableClassification: true,
       enableContours: true,
       enableTracking: true,
-      performanceMode: FaceDetectorMode.fast,
     ));
     _initializeCamera();
   }
@@ -58,12 +59,14 @@ class CameraPageState extends State<CameraPage> {
 
     final cameras = await availableCameras();
     for (var camera in cameras) {
-      if (camera.lensDirection == CameraLensDirection.front) {
+      if (camera.lensDirection == cameraDirection) {
         _controller = CameraController(
           camera,
           ResolutionPreset.medium,
           enableAudio: false,
         );
+
+        isFrontCamera = _controller!.description.lensDirection == cameraDirection;
 
         _initializeControllerFuture = _controller!.initialize().then((_) {
           if (mounted) {
@@ -97,11 +100,14 @@ class CameraPageState extends State<CameraPage> {
           bytes: bytes,
           metadata: InputImageMetadata(
             size: Size(image.width.toDouble(), image.height.toDouble()),
-            rotation: InputImageRotation.rotation270deg,
+            rotation: _rotationIntToImageRotation(_controller!.description.sensorOrientation),
             format: InputImageFormat.nv21,
             bytesPerRow: image.planes[0].bytesPerRow,
           ),
         );
+
+        // print("Image Format: ${image.format.raw}");
+        // print("Sensor Orientation: ${_controller!.description.sensorOrientation}");
 
         final faces = await _faceDetector.processImage(inputImage);
 
@@ -123,7 +129,6 @@ class CameraPageState extends State<CameraPage> {
 
   bool checkLiveness(List<Face> faces) {
     if (faces.isEmpty) {
-      // Reset if no face detected
       _resetLiveness();
       return false;
     }
@@ -155,7 +160,6 @@ class CameraPageState extends State<CameraPage> {
 
     final actionsCompleted = [_hasBlinked, _hasSmiled, _hasMovedHead].where((x) => x).length;
 
-    // Reset if no action for 5 seconds
     if (_lastActionTime != null && DateTime.now().difference(_lastActionTime!) > Duration(seconds: 5)) {
       _resetLiveness();
       return false;
@@ -206,7 +210,7 @@ class CameraPageState extends State<CameraPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Perform 2 of these: blink, smile, or move head"),
-          duration: Duration(seconds: 2),
+          duration: Duration(seconds: 1),
         ),
       );
       return;
@@ -268,22 +272,52 @@ class CameraPageState extends State<CameraPage> {
   Future<File?> _cropDetectedFace(File imageFile) async {
     try {
       img.Image? fullImage = img.decodeImage(await imageFile.readAsBytes());
-      if (fullImage == null || detectedFaces.isEmpty) return null;
+      if (fullImage == null) return null;
 
-      Face face = detectedFaces[0];
-      Rect faceRect = face.boundingBox;
+      fullImage = img.bakeOrientation(fullImage);
 
-      double scaleX = fullImage.width / _controller!.value.previewSize!.height;
-      double scaleY = fullImage.height / _controller!.value.previewSize!.width;
+      final InputImage inputImage = InputImage.fromFile(imageFile);
+      final List<Face> faces = await _faceDetector.processImage(inputImage);
+      int sensorOrientation = _controller!.description.sensorOrientation;
 
-      int x = (faceRect.left * scaleX).toInt().clamp(0, fullImage.width);
-      int y = (faceRect.top * scaleY).toInt().clamp(0, fullImage.height);
-      int width = (faceRect.width * scaleX).toInt().clamp(1, fullImage.width - x);
-      int height = (faceRect.height * scaleY).toInt().clamp(1, fullImage.height - y);
+      if (faces.isEmpty) {
+        print("❌ No face found in captured image.");
+        return null;
+      }
+
+      final Face face = faces[0];
+      final Rect faceRect = face.boundingBox;
+
+      final Size previewSize = _controller!.value.previewSize!;
+      double scaleX, scaleY;
+
+      if (sensorOrientation == 90 || sensorOrientation == 270) {
+        scaleX = fullImage.width / previewSize.height;
+        scaleY = fullImage.height / previewSize.width;
+      } else {
+        scaleX = fullImage.width / previewSize.width;
+        scaleY = fullImage.height / previewSize.height;
+      }
+
+      double left = faceRect.left * scaleX;
+      double top = faceRect.top * scaleY;
+      double right = faceRect.right * scaleX;
+      double bottom = faceRect.bottom * scaleY;
+
+      if (isFrontCamera && sensorOrientation != 90) {
+        final double tempLeft = left;
+        left = fullImage.width - right;
+        right = fullImage.width - tempLeft;
+      }
+
+      int x = left.toInt().clamp(0, fullImage.width - 1);
+      int y = top.toInt().clamp(0, fullImage.height - 1);
+      int width = (right - left).toInt().clamp(1, fullImage.width - x);
+      int height = (bottom - top).toInt().clamp(1, fullImage.height - y);
 
       img.Image croppedFace = img.copyCrop(fullImage, x: x, y: y, width: width, height: height);
 
-      if (_controller!.description.lensDirection == CameraLensDirection.front) {
+      if (isFrontCamera) {
         croppedFace = img.flipHorizontal(croppedFace);
       }
 
@@ -328,7 +362,7 @@ class CameraPageState extends State<CameraPage> {
     img.Image? fullImage = img.decodeImage(image.readAsBytesSync());
     if (fullImage == null || detectedFaces.isEmpty) return;
 
-    final bool isFrontCamera = _controller!.description.lensDirection == CameraLensDirection.front;
+    final bool isFrontCamera = _controller!.description.lensDirection == cameraDirection;
     if (isFrontCamera) {
       fullImage = img.flipHorizontal(fullImage);
       print("Image flipped for front camera correction.");
@@ -394,10 +428,11 @@ class CameraPageState extends State<CameraPage> {
                   painter: FacePainter(
                     detectedFaces,
                     Size(
-                      _controller!.value.previewSize!.height,
                       _controller!.value.previewSize!.width,
+                      _controller!.value.previewSize!.height,
                     ),
-                    isFrontCamera: true,
+                    sensorOrientation: _controller!.description.sensorOrientation,
+                    isFrontCamera: isFrontCamera,
                   ),
                 ),
               ),
@@ -443,5 +478,18 @@ class CameraPageState extends State<CameraPage> {
         Text(label),
       ],
     );
+  }
+
+  InputImageRotation _rotationIntToImageRotation(int rotation) {
+    switch (rotation) {
+      case 90:
+        return InputImageRotation.rotation90deg;
+      case 180:
+        return InputImageRotation.rotation180deg;
+      case 270:
+        return InputImageRotation.rotation270deg;
+      default:
+        return InputImageRotation.rotation0deg;
+    }
   }
 }

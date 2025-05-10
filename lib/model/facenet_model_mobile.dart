@@ -17,12 +17,13 @@ class FaceNetModel {
 
   Future<void> _loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('assets/facenet_model.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/facenet_model(11).tflite');
+      _interpreter.allocateTensors();
       _inputShape = _interpreter.getInputTensor(0).shape;
       _outputShape = _interpreter.getOutputTensor(0).shape;
-      print("TFLite model loaded!");
+      print("Model loaded. Input: $_inputShape, Output: $_outputShape");
     } catch (e) {
-      print("Error loading model: $e");
+      throw ("Failed to load model: $e");
     }
   }
 
@@ -61,7 +62,7 @@ class FaceNetModel {
       double similarity = cosineSimilarity(storedEmbeddingsList, newEmbeddings);
       print("Face similarity score: $similarity");
 
-      return similarity > 0.8;
+      return similarity > 0.5;
     } catch (e) {
       print("Error fetching face data: $e");
       return false;

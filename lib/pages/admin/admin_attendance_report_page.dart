@@ -206,13 +206,13 @@ class _AdminAttendanceReportPageState extends State<AdminAttendanceReportPage> {
 
         if (status == "Approved") {
           for (int day = startDate.day; day <= endDate.day; day++) {
-            if (validDates.contains(day) && leaveType != "Missed Punch Request") {
+            if (validDates.contains(day) && leaveType != "Attendance Request") {
               attendance[day] = "T";
             }
           }
         }
 
-        if (leaveType == "Missed Punch Request" && status == "Approved") {
+        if (leaveType == "Attendance Request" && status == "Approved") {
           for (int day = startDate.day; day <= endDate.day; day++) {
             if (validDates.contains(day)) {
               attendance[day] = "P";
