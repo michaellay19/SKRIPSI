@@ -1,7 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/constants/app_colors.dart';
@@ -10,6 +8,7 @@ import 'package:skripsi/model/attendance_card_model.dart';
 import 'package:skripsi/model/leave_request_model.dart';
 import 'package:skripsi/pages/users/home/camera_page.dart';
 import 'package:skripsi/provider/camera_provider.dart';
+import 'package:skripsi/provider/geofence_provider.dart';
 import 'package:skripsi/provider/profile_provider.dart';
 
 class HomePage extends StatefulWidget {
@@ -20,17 +19,24 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late double geofenceLatitude;
-  late double geofenceLongitude;
-  late double geofenceRadius;
-  bool isGeofenceLoaded = false;
   DateTime selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  late GeofenceProvider geofenceProvider;
+  bool _isGeofenceInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _checkUserFaceData();
-    _loadGeofenceData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_isGeofenceInitialized) {
+      geofenceProvider = Provider.of<GeofenceProvider>(context, listen: false);
+      _isGeofenceInitialized = true;
+    }
   }
 
   void _checkUserFaceData() async {
@@ -53,62 +59,9 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _loadGeofenceData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final doc = await FirebaseFirestore.instance.collection('geofence').doc('location').get();
-    if (doc.exists) {
-      setState(() {
-        geofenceLatitude = (doc['latitude'] as num).toDouble();
-        geofenceLongitude = (doc['longitude'] as num).toDouble();
-        geofenceRadius = (doc['radius'] as num).toDouble();
-        isGeofenceLoaded = true;
-      });
-    }
-  }
-
-  Future<bool> _isInsideGeofence() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permission denied. Please enable it in settings.')),
-        );
-        return false;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location permissions are permanently denied. Enable them in settings.')),
-      );
-      return false;
-    }
-
-    Position position = await Geolocator.getCurrentPosition();
-    double distance = Geolocator.distanceBetween(
-      position.latitude,
-      position.longitude,
-      geofenceLatitude,
-      geofenceLongitude,
-    );
-
-    print('distance: $position');
-
-    return distance <= geofenceRadius;
-  }
-
   void _attemptClock(String activityType) async {
-    if (!isGeofenceLoaded) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Geofence data not loaded. Please try again.')),
-      );
-      return;
-    }
+    bool insideGeofence = await geofenceProvider.isInsideGeofence(context);
 
-    bool insideGeofence = await _isInsideGeofence();
     if (insideGeofence) {
       Navigator.push(
         context,
@@ -159,6 +112,22 @@ class _HomePageState extends State<HomePage> {
     return grouped;
   }
 
+  int _countMonthlyLates(List<Map<String, dynamic>> activities) {
+    return activities.where((activity) {
+      final type = activity['activityType'];
+      final dateParts = activity['date'].split('-');
+      if (type != 'Clock In' || dateParts.length != 3) return false;
+
+      final activityMonth = int.tryParse(dateParts[1]);
+      final activityYear = int.tryParse(dateParts[2]);
+      if (activityMonth != selectedMonth.month || activityYear != selectedMonth.year) return false;
+
+      final timeParts = activity['time'].split(':');
+      final hour = int.tryParse(timeParts.first);
+      return hour != null && hour >= 9;
+    }).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
@@ -169,6 +138,8 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        toolbarHeight: 80,
         title: Row(
           children: [
             CircleAvatar(
@@ -217,7 +188,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 12),
             StreamBuilder<List<Map<String, dynamic>>>(
-              stream: Provider.of<CameraProvider>(context, listen: false).fetchActivities(),
+              stream: Provider.of<AttendanceProvider>(context, listen: false).fetchActivities(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(
@@ -250,6 +221,11 @@ class _HomePageState extends State<HomePage> {
                 final clockInTime = clockInActivity['time'] ?? '-';
                 final clockOutTime = clockOutActivity['time'] ?? '-';
 
+                final hasClockIn =
+                    activities.any((activity) => activity['activityType'] == 'Clock In' && activity['date'] == nowDate);
+                final hasClockOut = activities
+                    .any((activity) => activity['activityType'] == 'Clock Out' && activity['date'] == nowDate);
+
                 return Column(
                   children: [
                     Row(
@@ -271,55 +247,55 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: hasClockIn ? null : () => _attemptClock('Clock In'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: hasClockIn ? AppColors.inactive : AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              "Clock In",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: (!hasClockIn || hasClockOut) ? null : () => _attemptClock('Clock Out'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: (!hasClockIn || hasClockOut) ? AppColors.inactive : Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              "Clock Out",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 );
               },
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _attemptClock('Clock In'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Clock In",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _attemptClock('Clock Out'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Clock Out",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
             const SizedBox(height: 24),
             Row(
@@ -426,7 +402,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 12),
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: Provider.of<CameraProvider>(context, listen: false).fetchActivities(),
+                stream: Provider.of<AttendanceProvider>(context, listen: false).fetchActivities(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -462,6 +438,7 @@ class _HomePageState extends State<HomePage> {
                   }).toList();
 
                   final groupedActivities = _groupActivitiesByDate(activities);
+                  final lateCount = _countMonthlyLates(snapshot.data!);
 
                   final sortedKeys = groupedActivities.keys.toList()
                     ..sort((a, b) {
@@ -470,30 +447,63 @@ class _HomePageState extends State<HomePage> {
                       return bDate.compareTo(aDate);
                     });
 
-                  return ListView.builder(
-                    itemCount: sortedKeys.length,
-                    itemBuilder: (context, index) {
-                      final date = sortedKeys[index];
-                      final items = groupedActivities[date]!;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            date,
-                            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                  return ListView(
+                    children: [
+                      Card(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time, color: Colors.red),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "This Month Late",
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    "$lateCount times",
+                                    style: const TextStyle(fontSize: 14, color: Colors.black54),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          const Divider(thickness: 1),
-                          ...items.map((activity) {
-                            return ActivityTile(
-                              title: activity['activityType'] ?? 'Unknown',
-                              time: activity['time'],
-                              date: activity['date'],
-                            );
-                          }).toList(),
-                          const SizedBox(height: 12),
-                        ],
-                      );
-                    },
+                        ),
+                      ),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: sortedKeys.length,
+                        itemBuilder: (context, index) {
+                          final date = sortedKeys[index];
+                          final items = groupedActivities[date]!;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                date,
+                                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                              ),
+                              const Divider(thickness: 1),
+                              ...items.map((activity) {
+                                return ActivityTile(
+                                  title: activity['activityType'] ?? 'Unknown',
+                                  time: activity['time'],
+                                  date: activity['date'],
+                                );
+                              }),
+                              const SizedBox(height: 12),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   );
                 },
               ),

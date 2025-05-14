@@ -238,7 +238,7 @@ class CameraPageState extends State<CameraPage> {
       } else {
         bool isVerified = await faceNet.verifyFace(croppedFaceFile!);
         if (isVerified) {
-          await Provider.of<CameraProvider>(context, listen: false).uploadImage(croppedFaceFile, widget.activityType);
+          await Provider.of<AttendanceProvider>(context, listen: false).uploadImage(croppedFaceFile, widget.activityType);
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(

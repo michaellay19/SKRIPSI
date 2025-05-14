@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 
-class CameraProvider with ChangeNotifier {
+class AttendanceProvider with ChangeNotifier {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -65,5 +65,25 @@ class CameraProvider with ChangeNotifier {
                 'activityType': activityType,
               };
             }).toList());
+  }
+
+  Map<String, List<Map<String, dynamic>>> groupActivitiesByDate(List<Map<String, dynamic>> activities) {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var activity in activities) {
+      final date = activity['date'];
+      grouped[date] = [...?grouped[date], activity];
+    }
+    return grouped;
+  }
+
+  int countMonthlyLates(List<Map<String, dynamic>> activities, DateTime selectedMonth) {
+    return activities.where((activity) {
+      final parts = activity['date'].split('-');
+      if (activity['activityType'] != 'Clock In' || parts.length != 3) return false;
+      final month = int.tryParse(parts[1]);
+      final year = int.tryParse(parts[2]);
+      final hour = int.tryParse(activity['time'].split(":").first);
+      return month == selectedMonth.month && year == selectedMonth.year && hour != null && hour >= 9;
+    }).length;
   }
 }

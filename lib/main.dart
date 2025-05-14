@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:skripsi/pages/auth/splash_page.dart';
 import 'package:skripsi/provider/auth_provider.dart';
 import 'package:skripsi/provider/camera_provider.dart';
+import 'package:skripsi/provider/geofence_provider.dart';
 import 'package:skripsi/provider/profile_provider.dart';
 import 'package:skripsi/provider/request_provider.dart';
 
@@ -26,10 +27,11 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => CameraProvider()),
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => MyAuthProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => LeaveRequestProvider()),
+        ChangeNotifierProvider(create: (_) => GeofenceProvider()),
       ],
       child: const MyApp(),
     ),

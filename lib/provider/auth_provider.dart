@@ -75,11 +75,11 @@ class MyAuthProvider with ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       Navigator.pop(context);
       String errorMessage = _getErrorMessage(e);
-      debugPrint(e.toString());
+      print(e.toString());
       _showSnackBar(context, errorMessage);
     } catch (e) {
       Navigator.pop(context);
-      debugPrint("Unexpected error: $e");
+      print("Unexpected error: $e");
       _showSnackBar(context, 'An unexpected error occurred. Please try again.');
     }
   }

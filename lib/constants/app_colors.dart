@@ -8,4 +8,5 @@ class AppColors {
   static const Color text1 = Colors.white;
   static const Color text2 = Colors.black;
   static const Color cancel = Colors.red;
+  static const Color inactive = Colors.grey;
 }
