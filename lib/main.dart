@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/pages/auth/splash_page.dart';
 import 'package:skripsi/provider/auth_provider.dart';
-import 'package:skripsi/provider/camera_provider.dart';
+import 'package:skripsi/provider/attendance_provider.dart';
 import 'package:skripsi/provider/geofence_provider.dart';
 import 'package:skripsi/provider/profile_provider.dart';
 import 'package:skripsi/provider/request_provider.dart';

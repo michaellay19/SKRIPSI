@@ -71,19 +71,27 @@ class AttendanceProvider with ChangeNotifier {
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (var activity in activities) {
       final date = activity['date'];
-      grouped[date] = [...?grouped[date], activity];
+      if (!grouped.containsKey(date)) {
+        grouped[date] = [];
+      }
+      grouped[date]!.add(activity);
     }
     return grouped;
   }
 
   int countMonthlyLates(List<Map<String, dynamic>> activities, DateTime selectedMonth) {
     return activities.where((activity) {
-      final parts = activity['date'].split('-');
-      if (activity['activityType'] != 'Clock In' || parts.length != 3) return false;
-      final month = int.tryParse(parts[1]);
-      final year = int.tryParse(parts[2]);
-      final hour = int.tryParse(activity['time'].split(":").first);
-      return month == selectedMonth.month && year == selectedMonth.year && hour != null && hour >= 9;
+      final type = activity['activityType'];
+      final dateParts = activity['date'].split('-');
+      if (type != 'Clock In' || dateParts.length != 3) return false;
+
+      final activityMonth = int.tryParse(dateParts[1]);
+      final activityYear = int.tryParse(dateParts[2]);
+      if (activityMonth != selectedMonth.month || activityYear != selectedMonth.year) return false;
+
+      final timeParts = activity['time'].split(':');
+      final hour = int.tryParse(timeParts.first);
+      return hour != null && hour >= 9;
     }).length;
   }
 }

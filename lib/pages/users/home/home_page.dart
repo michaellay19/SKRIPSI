@@ -7,7 +7,7 @@ import 'package:skripsi/model/activity_tile_model.dart';
 import 'package:skripsi/model/attendance_card_model.dart';
 import 'package:skripsi/model/leave_request_model.dart';
 import 'package:skripsi/pages/users/home/camera_page.dart';
-import 'package:skripsi/provider/camera_provider.dart';
+import 'package:skripsi/provider/attendance_provider.dart';
 import 'package:skripsi/provider/geofence_provider.dart';
 import 'package:skripsi/provider/profile_provider.dart';
 
@@ -100,46 +100,19 @@ class _HomePageState extends State<HomePage> {
     return hour < 17 ? "Early Clock Out" : "Go Home";
   }
 
-  Map<String, List<Map<String, dynamic>>> _groupActivitiesByDate(List<Map<String, dynamic>> activities) {
-    final Map<String, List<Map<String, dynamic>>> grouped = {};
-    for (var activity in activities) {
-      final date = activity['date'];
-      if (!grouped.containsKey(date)) {
-        grouped[date] = [];
-      }
-      grouped[date]!.add(activity);
-    }
-    return grouped;
-  }
-
-  int _countMonthlyLates(List<Map<String, dynamic>> activities) {
-    return activities.where((activity) {
-      final type = activity['activityType'];
-      final dateParts = activity['date'].split('-');
-      if (type != 'Clock In' || dateParts.length != 3) return false;
-
-      final activityMonth = int.tryParse(dateParts[1]);
-      final activityYear = int.tryParse(dateParts[2]);
-      if (activityMonth != selectedMonth.month || activityYear != selectedMonth.year) return false;
-
-      final timeParts = activity['time'].split(':');
-      final hour = int.tryParse(timeParts.first);
-      return hour != null && hour >= 9;
-    }).length;
-  }
-
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
-
+    final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
     final profileImage = profileProvider.profileImage;
     final userName = profileProvider.name;
     final userPosition = profileProvider.position;
 
+    final activitiesStream = attendanceProvider.fetchActivities();
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        toolbarHeight: 80,
+        toolbarHeight: 75,
         title: Row(
           children: [
             CircleAvatar(
@@ -175,307 +148,245 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 12),
-            const Text(
-              "Today Attendance",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            StreamBuilder<List<Map<String, dynamic>>>(
-              stream: Provider.of<AttendanceProvider>(context, listen: false).fetchActivities(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Error: ${snapshot.error}'),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => setState(() {}),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+        child: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: activitiesStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Expanded(child: Center(child: CircularProgressIndicator()));
+            }
 
-                final activities = snapshot.data ?? [];
-                final nowDate = DateTime.now().toFormattedString();
-
-                final clockInActivity = activities.firstWhere(
-                  (activity) => activity['activityType'] == 'Clock In' && activity['date'] == nowDate,
-                  orElse: () => {'time': '-'},
-                );
-                final clockOutActivity = activities.firstWhere(
-                  (activity) => activity['activityType'] == 'Clock Out' && activity['date'] == nowDate,
-                  orElse: () => {'time': '-'},
-                );
-
-                final clockInTime = clockInActivity['time'] ?? '-';
-                final clockOutTime = clockOutActivity['time'] ?? '-';
-
-                final hasClockIn =
-                    activities.any((activity) => activity['activityType'] == 'Clock In' && activity['date'] == nowDate);
-                final hasClockOut = activities
-                    .any((activity) => activity['activityType'] == 'Clock Out' && activity['date'] == nowDate);
-
-                return Column(
-                  children: [
-                    Row(
-                      children: [
-                        AttendanceCard(
-                          title: "Clock In",
-                          time: clockInTime,
-                          subtitle: _getSubtitle(clockInTime, isCheckIn: true),
-                          timeStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
-                          subtitleStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
-                        ),
-                        const SizedBox(width: 16),
-                        AttendanceCard(
-                          title: "Clock Out",
-                          time: clockOutTime,
-                          subtitle: _getSubtitle(clockOutTime, isCheckIn: false),
-                          timeStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
-                          subtitleStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: hasClockIn ? null : () => _attemptClock('Clock In'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: hasClockIn ? AppColors.inactive : AppColors.primary,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              "Clock In",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: (!hasClockIn || hasClockOut) ? null : () => _attemptClock('Clock Out'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: (!hasClockIn || hasClockOut) ? AppColors.inactive : Colors.red,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              "Clock Out",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Your Activity",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            if (snapshot.hasError) {
+              return Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('An error occurred: ${snapshot.error}'),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => setState(() {}),
+                        child: const Text('Retry'),
+                      ),
+                    ],
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: () async {
-                    final selected = await showDialog<DateTime>(
-                      context: context,
-                      builder: (context) {
-                        int tempMonth = selectedMonth.month;
-                        int tempYear = selectedMonth.year;
-                        return AlertDialog(
-                          title: Text(
-                            'Select Month and Year',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          content: Row(
-                            children: [
-                              Expanded(
-                                child: StatefulBuilder(
-                                  builder: (context, setState) {
-                                    return DropdownButton<int>(
-                                      isExpanded: true,
-                                      value: tempMonth,
-                                      items: List.generate(12, (index) {
-                                        return DropdownMenuItem(
-                                          value: index + 1,
-                                          child: Text(DateFormat.MMMM().format(DateTime(0, index + 1))),
-                                        );
-                                      }),
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          setState(() {
-                                            tempMonth = value;
-                                          });
-                                        }
-                                      },
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: StatefulBuilder(
-                                  builder: (context, setState) {
-                                    return DropdownButton<int>(
-                                      isExpanded: true,
-                                      value: tempYear,
-                                      items: List.generate(5, (index) {
-                                        final year = DateTime.now().year - index;
-                                        return DropdownMenuItem(
-                                          value: year,
-                                          child: Text(year.toString()),
-                                        );
-                                      }),
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          setState(() {
-                                            tempYear = value;
-                                          });
-                                        }
-                                      },
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(DateTime(tempYear, tempMonth));
-                              },
-                              child: const Text('Confirm'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
+              );
+            }
 
-                    if (selected != null) {
-                      setState(() {
-                        selectedMonth = DateTime(selected.year, selected.month);
-                      });
-                    }
-                  },
-                  icon: const Icon(Icons.date_range),
-                  label: Text(DateFormat('MMMM yyyy').format(selectedMonth)),
+            final activities = snapshot.data ?? [];
+            final nowDate = DateTime.now().toFormattedString();
+
+            final clockInActivity = activities.firstWhere(
+              (activity) => activity['activityType'] == 'Clock In' && activity['date'] == nowDate,
+              orElse: () => {'time': '-'},
+            );
+            final clockOutActivity = activities.firstWhere(
+              (activity) => activity['activityType'] == 'Clock Out' && activity['date'] == nowDate,
+              orElse: () => {'time': '-'},
+            );
+
+            final clockInTime = clockInActivity['time'] ?? '-';
+            final clockOutTime = clockOutActivity['time'] ?? '-';
+
+            final hasClockIn = activities.any((a) => a['activityType'] == 'Clock In' && a['date'] == nowDate);
+            final hasClockOut = activities.any((a) => a['activityType'] == 'Clock Out' && a['date'] == nowDate);
+
+            final lateCount = attendanceProvider.countMonthlyLates(activities, selectedMonth);
+
+            final selectedMonthActivities = activities.where((activity) {
+              final parts = activity['date'].split('-');
+              if (parts.length == 3) {
+                final month = int.parse(parts[1]);
+                final year = int.parse(parts[2]);
+                return month == selectedMonth.month && year == selectedMonth.year;
+              }
+              return false;
+            }).toList();
+
+            final groupedActivities = attendanceProvider.groupActivitiesByDate(selectedMonthActivities);
+            final sortedKeys = groupedActivities.keys.toList()
+              ..sort((a, b) {
+                final aDate = DateTime.parse('${a.split('-')[2]}-${a.split('-')[1]}-${a.split('-')[0]}');
+                final bDate = DateTime.parse('${b.split('-')[2]}-${b.split('-')[1]}-${b.split('-')[0]}');
+                return bDate.compareTo(aDate);
+              });
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Today Attendance",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: Provider.of<AttendanceProvider>(context, listen: false).fetchActivities(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('An error occurred: ${snapshot.error}'),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => setState(() {}),
-                            child: const Text('Retry'),
-                          ),
-                        ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    AttendanceCard(
+                      title: "Clock In",
+                      time: clockInTime,
+                      subtitle: _getSubtitle(clockInTime, isCheckIn: true),
+                      timeStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
+                      subtitleStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
+                    ),
+                    const SizedBox(width: 16),
+                    AttendanceCard(
+                      title: "Clock Out",
+                      time: clockOutTime,
+                      subtitle: _getSubtitle(clockOutTime, isCheckIn: false),
+                      timeStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
+                      subtitleStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    _buildClockButton(
+                      label: "Clock In",
+                      isEnabled: !hasClockIn,
+                      onPressed: () => _attemptClock('Clock In'),
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 16),
+                    _buildClockButton(
+                      label: "Clock Out",
+                      isEnabled: hasClockIn && !hasClockOut,
+                      onPressed: () => _attemptClock('Clock Out'),
+                      color: AppColors.cancel,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Your Activity",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                    );
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('No activities recorded yet.'));
-                  }
-
-                  final activities = snapshot.data!.where((activity) {
-                    final parts = activity['date'].split('-');
-                    if (parts.length == 3) {
-                      final activityMonth = int.parse(parts[1]);
-                      final activityYear = int.parse(parts[2]);
-                      return activityMonth == selectedMonth.month && activityYear == selectedMonth.year;
-                    }
-                    return false;
-                  }).toList();
-
-                  final groupedActivities = _groupActivitiesByDate(activities);
-                  final lateCount = _countMonthlyLates(snapshot.data!);
-
-                  final sortedKeys = groupedActivities.keys.toList()
-                    ..sort((a, b) {
-                      final aDate = DateTime.parse('${a.split('-')[2]}-${a.split('-')[1]}-${a.split('-')[0]}');
-                      final bDate = DateTime.parse('${b.split('-')[2]}-${b.split('-')[1]}-${b.split('-')[0]}');
-                      return bDate.compareTo(aDate);
-                    });
-
-                  return ListView(
-                    children: [
-                      Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.access_time, color: Colors.red),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final selected = await showDialog<DateTime>(
+                          context: context,
+                          builder: (context) {
+                            int tempMonth = selectedMonth.month;
+                            int tempYear = selectedMonth.year;
+                            return AlertDialog(
+                              title: Text(
+                                'Select Month and Year',
+                                style: TextStyle(fontSize: 20),
+                              ),
+                              content: Row(
                                 children: [
-                                  const Text(
-                                    "This Month Late",
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  Expanded(
+                                    child: StatefulBuilder(
+                                      builder: (context, setState) {
+                                        return DropdownButton<int>(
+                                          isExpanded: true,
+                                          value: tempMonth,
+                                          items: List.generate(12, (index) {
+                                            return DropdownMenuItem(
+                                              value: index + 1,
+                                              child: Text(DateFormat.MMMM().format(DateTime(0, index + 1))),
+                                            );
+                                          }),
+                                          onChanged: (value) {
+                                            if (value != null) {
+                                              setState(() {
+                                                tempMonth = value;
+                                              });
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
                                   ),
-                                  Text(
-                                    "$lateCount times",
-                                    style: const TextStyle(fontSize: 14, color: Colors.black54),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: StatefulBuilder(
+                                      builder: (context, setState) {
+                                        return DropdownButton<int>(
+                                          isExpanded: true,
+                                          value: tempYear,
+                                          items: List.generate(5, (index) {
+                                            final year = DateTime.now().year - index;
+                                            return DropdownMenuItem(
+                                              value: year,
+                                              child: Text(year.toString()),
+                                            );
+                                          }),
+                                          onChanged: (value) {
+                                            if (value != null) {
+                                              setState(() {
+                                                tempYear = value;
+                                              });
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(DateTime(tempYear, tempMonth));
+                                  },
+                                  child: const Text('Confirm'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (selected != null) {
+                          setState(() {
+                            selectedMonth = DateTime(selected.year, selected.month);
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.date_range),
+                      label: Text(DateFormat('MMMM yyyy').format(selectedMonth)),
+                    ),
+                  ],
+                ),
+                Card(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time, color: AppColors.cancel),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "This Month Late",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              "$lateCount times",
+                              style: const TextStyle(fontSize: 14, color: Colors.black54),
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    children: [
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -504,11 +415,37 @@ class _HomePageState extends State<HomePage> {
                         },
                       ),
                     ],
-                  );
-                },
-              ),
-            ),
-          ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClockButton({
+    required String label,
+    required bool isEnabled,
+    required VoidCallback? onPressed,
+    required Color color,
+  }) {
+    return Expanded(
+      child: ElevatedButton(
+        onPressed: isEnabled ? onPressed : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isEnabled ? color : AppColors.inactive,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );
