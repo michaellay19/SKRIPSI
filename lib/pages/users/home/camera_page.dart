@@ -40,6 +40,7 @@ class CameraPageState extends State<CameraPage> {
   bool _hasMovedHead = false;
   DateTime? _lastActionTime;
   late bool isFrontCamera;
+  Rect? _latestFaceBoundingBox;
 
   @override
   void initState() {
@@ -106,10 +107,11 @@ class CameraPageState extends State<CameraPage> {
           ),
         );
 
-        // print("Image Format: ${image.format.raw}");
-        // print("Sensor Orientation: ${_controller!.description.sensorOrientation}");
-
         final faces = await _faceDetector.processImage(inputImage);
+        if (faces.isNotEmpty) {
+          final face = faces.first;
+          _latestFaceBoundingBox = face.boundingBox;
+        }
 
         if (mounted) {
           setState(() {
@@ -238,7 +240,8 @@ class CameraPageState extends State<CameraPage> {
       } else {
         bool isVerified = await faceNet.verifyFace(croppedFaceFile!);
         if (isVerified) {
-          await Provider.of<AttendanceProvider>(context, listen: false).uploadImage(croppedFaceFile, widget.activityType);
+          await Provider.of<AttendanceProvider>(context, listen: false)
+              .uploadImage(croppedFaceFile, widget.activityType);
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -276,19 +279,15 @@ class CameraPageState extends State<CameraPage> {
 
       fullImage = img.bakeOrientation(fullImage);
 
-      final InputImage inputImage = InputImage.fromFile(imageFile);
-      final List<Face> faces = await _faceDetector.processImage(inputImage);
-      int sensorOrientation = _controller!.description.sensorOrientation;
-
-      if (faces.isEmpty) {
-        print("❌ No face found in captured image.");
+      if (_latestFaceBoundingBox == null) {
+        print("❌ No cached face bounding box.");
         return null;
       }
 
-      final Face face = faces[0];
-      final Rect faceRect = face.boundingBox;
-
+      final Rect faceRect = _latestFaceBoundingBox!;
       final Size previewSize = _controller!.value.previewSize!;
+      int sensorOrientation = _controller!.description.sensorOrientation;
+
       double scaleX, scaleY;
 
       if (sensorOrientation == 90 || sensorOrientation == 270) {

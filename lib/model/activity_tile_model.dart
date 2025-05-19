@@ -4,11 +4,14 @@ class ActivityTile extends StatelessWidget {
   final String title;
   final String time;
   final String date;
+  final VoidCallback? onTap;
 
-  const ActivityTile({super.key, 
+  const ActivityTile({
+    super.key,
     required this.title,
     required this.time,
     required this.date,
+    this.onTap,
   });
 
   @override
@@ -26,6 +29,7 @@ class ActivityTile extends StatelessWidget {
           time,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
+        onTap: onTap,
       ),
     );
   }

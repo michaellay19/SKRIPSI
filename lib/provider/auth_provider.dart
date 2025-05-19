@@ -38,10 +38,15 @@ class MyAuthProvider with ChangeNotifier {
     bool isWeb = kIsWeb;
     bool isAdmin = trimmedEmail.toLowerCase() == AppStrings.adminEmail;
 
+    late BuildContext dialogContext;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (BuildContext ctx) {
+        dialogContext = ctx;
+        return const Center(child: CircularProgressIndicator());
+      },
     );
 
     try {
@@ -50,7 +55,9 @@ class MyAuthProvider with ChangeNotifier {
         password: trimmedPassword,
       );
 
-      Navigator.pop(context);
+      if (Navigator.canPop(dialogContext)) {
+        Navigator.pop(dialogContext);
+      }
 
       if (userCredential.user != null) {
         _user = userCredential.user;
@@ -67,19 +74,23 @@ class MyAuthProvider with ChangeNotifier {
             MaterialPageRoute(builder: (context) => const AllPages()),
           );
         } else {
-          _showSnackBar(context, 'Access denied.');
+          if (context.mounted) {
+            _showSnackBar(context, 'Access denied.');
+          }
         }
       } else {
         _showSnackBar(context, 'Email or password is incorrect. Please try again.');
       }
     } on FirebaseAuthException catch (e) {
-      Navigator.pop(context);
+      if (Navigator.canPop(dialogContext)) {
+        Navigator.pop(dialogContext);
+      }
       String errorMessage = _getErrorMessage(e);
-      print(e.toString());
       _showSnackBar(context, errorMessage);
     } catch (e) {
-      Navigator.pop(context);
-      print("Unexpected error: $e");
+      if (Navigator.canPop(dialogContext)) {
+        Navigator.pop(dialogContext);
+      }
       _showSnackBar(context, 'An unexpected error occurred. Please try again.');
     }
   }

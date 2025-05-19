@@ -27,6 +27,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _logout() async {
     await Provider.of<MyAuthProvider>(context, listen: false).signOut();
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const LoginPage()),
     );

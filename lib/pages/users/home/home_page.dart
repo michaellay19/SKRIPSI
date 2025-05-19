@@ -100,6 +100,41 @@ class _HomePageState extends State<HomePage> {
     return hour < 17 ? "Early Clock Out" : "Go Home";
   }
 
+  void _showImageDialog(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: double.infinity,
+                height: 300,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Center(child: Icon(Icons.broken_image, size: 50));
+                  },
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Close"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
@@ -113,6 +148,9 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: AppColors.background2,
         title: Row(
           children: [
             CircleAvatar(
@@ -152,7 +190,7 @@ class _HomePageState extends State<HomePage> {
           stream: activitiesStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Expanded(child: Center(child: CircularProgressIndicator()));
+              return Center(child: CircularProgressIndicator());
             }
 
             if (snapshot.hasError) {
@@ -403,10 +441,20 @@ class _HomePageState extends State<HomePage> {
                               ),
                               const Divider(thickness: 1),
                               ...items.map((activity) {
+                                final imageUrl = activity['url'];
                                 return ActivityTile(
                                   title: activity['activityType'] ?? 'Unknown',
                                   time: activity['time'],
                                   date: activity['date'],
+                                  onTap: () {
+                                    if (imageUrl != null && imageUrl.isNotEmpty) {
+                                      _showImageDialog(imageUrl);
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('No image available for this activity')),
+                                      );
+                                    }
+                                  },
                                 );
                               }),
                               const SizedBox(height: 12),

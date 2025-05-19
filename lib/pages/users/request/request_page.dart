@@ -56,6 +56,14 @@ class _RequestPageState extends State<RequestPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      Provider.of<LeaveRequestProvider>(context, listen: false).processPendingLeaveRequests();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final leaveRequestProvider = Provider.of<LeaveRequestProvider>(context);
 
@@ -74,6 +82,38 @@ class _RequestPageState extends State<RequestPage> {
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: StreamBuilder<List<LeaveRequest>>(
+              stream: leaveRequestProvider.fetchLeaveRequests(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const SizedBox();
+                }
+
+                final leaveRequests = snapshot.data!;
+                final total = leaveRequests.length;
+                final approved = leaveRequests.where((r) => r.status.toLowerCase() == 'approved').length;
+                final pending = leaveRequests.where((r) => r.status.toLowerCase() == 'pending').length;
+                final rejected = leaveRequests.where((r) => r.status.toLowerCase() == 'rejected').length;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Your Leave Summary',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Total Requests: $total'),
+                    Text('Approved: $approved'),
+                    Text('Pending: $pending'),
+                    Text('Rejected: $rejected'),
+                  ],
+                );
+              },
+            ),
+          ),
           Expanded(
             child: StreamBuilder<List<LeaveRequest>>(
               stream: leaveRequestProvider.fetchLeaveRequests(),
