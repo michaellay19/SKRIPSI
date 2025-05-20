@@ -26,7 +26,6 @@ class PersonalInfoPage extends StatelessWidget {
       position: doc['position'],
       religion: doc['religion'],
       address: doc['address'],
-      employeeStatus: doc['employeeStatus'],
       joinDate: doc['joinDate'],
       phone: doc['phone'],
     );
@@ -61,7 +60,6 @@ class PersonalInfoPage extends StatelessWidget {
                 _buildInfoTile('Position', employee.position),
                 _buildInfoTile('Religion', employee.religion),
                 _buildInfoTile('Address', employee.address),
-                _buildInfoTile('Employee Status', employee.employeeStatus),
                 _buildInfoTile('Join Date', employee.joinDate),
                 _buildInfoTile('Phone', employee.phone),
               ],

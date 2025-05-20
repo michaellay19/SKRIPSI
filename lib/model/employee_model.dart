@@ -10,7 +10,6 @@ class Employee {
   final String position;
   final String religion;
   final String address;
-  final String employeeStatus;
   final String joinDate;
   final String phone;
 
@@ -26,7 +25,6 @@ class Employee {
     required this.position,
     required this.religion,
     required this.address,
-    required this.employeeStatus,
     required this.joinDate,
     required this.phone,
   });
@@ -42,7 +40,6 @@ class Employee {
     String? position,
     String? religion,
     String? address,
-    String? employeeStatus,
     String? joinDate,
     String? phone,
   }) {
@@ -58,7 +55,6 @@ class Employee {
       position: position ?? this.position,
       religion: religion ?? this.religion,
       address: address ?? this.address,
-      employeeStatus: employeeStatus ?? this.employeeStatus,
       joinDate: joinDate ?? this.joinDate,
       phone: phone ?? this.phone,
     );
@@ -77,7 +73,6 @@ class Employee {
       'position': position,
       'religion': religion,
       'address': address,
-      'employeeStatus': employeeStatus,
       'joinDate': joinDate,
       'phone': phone,
     };

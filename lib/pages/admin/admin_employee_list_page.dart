@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/model/employee_model.dart';
 
@@ -38,7 +39,6 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         position: doc["position"],
         religion: doc["religion"],
         address: doc["address"],
-        employeeStatus: doc["employeeStatus"],
         joinDate: doc["joinDate"],
         phone: doc["phone"],
       );
@@ -50,6 +50,38 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
       employees.clear();
       employees.addAll(loadedEmployees);
     });
+  }
+
+  void _showEmployeeFaceImage(String uid) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final faceImageUrl = doc.data()?['faceImage'];
+
+      if (faceImageUrl == null || faceImageUrl.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Face image not available.")),
+        );
+        return;
+      }
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Face Image"),
+          content: Image.network(faceImageUrl),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Close"),
+            )
+          ],
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load face image: $e")),
+      );
+    }
   }
 
   void _showEmployeeDialog({Employee? employee}) {
@@ -66,7 +98,6 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         "position",
         "religion",
         "address",
-        "employeeStatus",
         "joinDate",
         "phone"
       ])
@@ -87,13 +118,12 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                   _buildField(controllers["name"]!, "Name", isRequired: true),
                   _buildField(controllers["nik"]!, "NIK", isNik: true, isRequired: true),
                   _buildField(controllers["email"]!, "Email", isRequired: true, isEditable: isEditing ? false : true),
-                  _buildField(controllers["gender"]!, "Gender"),
-                  _buildField(controllers["dob"]!, "DOB", isDate: true),
+                  _buildGenderField(controllers["gender"]!, "Gender"),
+                  _buildField(controllers["dob"]!, "Date of Birth", isDate: true),
                   _buildField(controllers["pob"]!, "Place of Birth"),
                   _buildField(controllers["position"]!, "Position"),
                   _buildField(controllers["religion"]!, "Religion"),
                   _buildField(controllers["address"]!, "Address"),
-                  _buildField(controllers["employeeStatus"]!, "Employee Status"),
                   _buildField(controllers["joinDate"]!, "Join Date", isDate: true),
                   _buildField(controllers["phone"]!, "Phone"),
                 ],
@@ -120,60 +150,69 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
   }
 
   Future<void> _saveEmployee(Map<String, TextEditingController> controllers, bool isEditing, Employee? employee) async {
+    const String functionUrl = 'https://api-ryy35i7zhq-uc.a.run.app/create-user';
+
+    final employeeData = {
+      "uid": isEditing ? employee!.uid : null,
+      "isEditing": isEditing,
+      "no": isEditing ? employee!.no : (employees.length + 1).toString().padLeft(4, '0'),
+      "name": controllers["name"]!.text,
+      "nik": controllers["nik"]!.text,
+      "email": controllers["email"]!.text,
+      "gender": controllers["gender"]!.text,
+      "dob": controllers["dob"]!.text,
+      "pob": controllers["pob"]!.text,
+      "position": controllers["position"]!.text,
+      "religion": controllers["religion"]!.text,
+      "address": controllers["address"]!.text,
+      "joinDate": controllers["joinDate"]!.text,
+      "phone": controllers["phone"]!.text,
+    };
+
     try {
-      final firestore = FirebaseFirestore.instance;
-      String uid;
-
-      if (!isEditing) {
-        final auth = FirebaseAuth.instance;
-        UserCredential userCredential = await auth.createUserWithEmailAndPassword(
-          email: controllers["email"]!.text,
-          password: "User123",
-        );
-        uid = userCredential.user!.uid;
-      } else {
-        uid = employee!.uid;
-      }
-
-        if (!isEditing) {
-        await firestore.collection("users").doc(uid).set({
-          "createdAt": FieldValue.serverTimestamp(),
-        });
-      }
-
-      final employeeData = Employee(
-        uid: uid,
-        no: isEditing ? employee!.no : (employees.length + 1).toString().padLeft(4, '0'),
-        name: controllers["name"]!.text,
-        nik: controllers["nik"]!.text,
-        email: controllers["email"]!.text,
-        gender: controllers["gender"]!.text,
-        dob: controllers["dob"]!.text,
-        pob: controllers["pob"]!.text,
-        position: controllers["position"]!.text,
-        religion: controllers["religion"]!.text,
-        address: controllers["address"]!.text,
-        employeeStatus: controllers["employeeStatus"]!.text,
-        joinDate: controllers["joinDate"]!.text,
-        phone: controllers["phone"]!.text,
+      final response = await http.post(
+        Uri.parse(functionUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(employeeData),
       );
 
-      await firestore.collection("users").doc(uid).collection("profile").doc(uid).set(employeeData.toMap());
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final uid = data['uid'] as String;
 
-      setState(() {
-        if (isEditing) {
-          int index = employees.indexWhere((e) => e.uid == uid);
-          print(index);
-          print(employees);
-          if (index != -1) employees[index] = employeeData;
-          print(employees);
-        } else {
-          employees.add(employeeData);
-        }
-      });
+        final newEmployee = Employee(
+          uid: uid,
+          no: employeeData["no"]! as String,
+          name: employeeData["name"]! as String,
+          nik: employeeData["nik"]! as String,
+          email: employeeData["email"]! as String,
+          gender: employeeData["gender"]! as String,
+          dob: employeeData["dob"]! as String,
+          pob: employeeData["pob"]! as String,
+          position: employeeData["position"]! as String,
+          religion: employeeData["religion"]! as String,
+          address: employeeData["address"]! as String,
+          joinDate: employeeData["joinDate"]! as String,
+          phone: employeeData["phone"]! as String,
+        );
 
-      Navigator.pop(context);
+        setState(() {
+          if (isEditing) {
+            int index = employees.indexWhere((e) => e.uid == uid);
+            if (index != -1) employees[index] = newEmployee;
+          } else {
+            employees.add(newEmployee);
+          }
+        });
+
+        Navigator.pop(context);
+      } else {
+        throw Exception('Failed to save employee: ${response.body}');
+      }
     } catch (e) {
+      print(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: ${e.toString()}")),
       );
@@ -202,12 +241,15 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                   _buildDetailItem(Icons.person, "Name", employee.name),
                   _buildDetailItem(Icons.email, "Email", employee.email),
                   _buildDetailItem(Icons.credit_card, "NIK", employee.nik),
-                  _buildDetailItem(Icons.male, "Gender", employee.gender),
+                  _buildDetailItem(
+                    employee.gender.toLowerCase() == "female" ? Icons.female : Icons.male,
+                    "Gender",
+                    employee.gender,
+                  ),
                   _buildDetailItem(Icons.cake, "DOB", employee.dob),
                   _buildDetailItem(Icons.location_on, "Place of Birth", employee.pob),
                   _buildDetailItem(Icons.work, "Position", employee.position),
                   _buildDetailItem(Icons.location_city, "Address", employee.address),
-                  _buildDetailItem(Icons.check_circle, "Employee Status", employee.employeeStatus),
                   _buildDetailItem(Icons.date_range, "Join Date", employee.joinDate),
                   _buildDetailItem(Icons.phone, "Phone", employee.phone),
                 ],
@@ -223,6 +265,61 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         );
       },
     );
+  }
+
+  void _confirmDelete(Employee employee) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Confirm Delete"),
+          content: Text("Are you sure you want to delete ${employee.name}?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _deleteEmployee(employee.uid);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteEmployee(String uid) async {
+    const String functionUrl = 'https://api-ryy35i7zhq-uc.a.run.app/delete-user';
+
+    try {
+      final response = await http.post(
+        Uri.parse(functionUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'uid': uid}),
+      );
+
+      if (response.statusCode == 200) {
+        print("User deleted successfully: ${jsonDecode(response.body)}");
+        setState(() {
+          employees.removeWhere((e) => e.uid == uid);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Employee deleted successfully")),
+        );
+      } else {
+        print("Failed to delete user: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      print("Error deleting user: $e");
+    }
   }
 
   Widget _buildField(TextEditingController controller, String label,
@@ -260,6 +357,27 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                 }
               }
             : null,
+      ),
+    );
+  }
+
+  Widget _buildGenderField(TextEditingController controller, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: DropdownButtonFormField<String>(
+        value: controller.text.isNotEmpty ? controller.text : null,
+        items: const [
+          DropdownMenuItem(value: "Male", child: Text("Male")),
+          DropdownMenuItem(value: "Female", child: Text("Female")),
+        ],
+        onChanged: (value) {
+          controller.text = value!;
+        },
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        validator: (value) => value == null || value.isEmpty ? "Gender is required" : null,
       ),
     );
   }
@@ -334,12 +452,20 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                               DataCell(Row(
                                 children: [
                                   IconButton(
+                                    icon: const Icon(Icons.image, color: Colors.teal),
+                                    onPressed: () => _showEmployeeFaceImage(employee.uid),
+                                  ),
+                                  IconButton(
                                     icon: const Icon(Icons.visibility, color: Colors.orange),
                                     onPressed: () => _showEmployeeDetails(employee),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.edit, color: Colors.blue),
                                     onPressed: () => _showEmployeeDialog(employee: employee),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => _confirmDelete(employee),
                                   ),
                                 ],
                               )),
