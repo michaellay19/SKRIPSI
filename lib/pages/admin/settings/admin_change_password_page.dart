@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/constants/app_colors.dart';
-import 'package:skripsi/provider/profile_provider.dart';
+import 'package:skripsi/providers/profile_provider.dart';
 
 class AdminChangePasswordPage extends StatefulWidget {
   const AdminChangePasswordPage({super.key});

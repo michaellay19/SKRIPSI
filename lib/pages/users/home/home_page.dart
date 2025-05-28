@@ -3,13 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/constants/app_colors.dart';
-import 'package:skripsi/model/activity_tile_model.dart';
-import 'package:skripsi/model/attendance_card_model.dart';
-import 'package:skripsi/model/leave_request_model.dart';
 import 'package:skripsi/pages/users/home/camera_page.dart';
-import 'package:skripsi/provider/attendance_provider.dart';
-import 'package:skripsi/provider/geofence_provider.dart';
-import 'package:skripsi/provider/profile_provider.dart';
+import 'package:skripsi/widgets/home_header_profile.dart';
+import 'package:skripsi/widgets/image_dialog.dart';
+import 'package:skripsi/widgets/month_year_filter_dialog.dart';
+import 'package:skripsi/widgets/today_attendance_section.dart';
+import 'package:skripsi/providers/attendance_provider.dart';
+import 'package:skripsi/providers/geofence_provider.dart';
+import 'package:skripsi/providers/profile_provider.dart';
+import 'package:skripsi/utility/date_extensions.dart';
+import 'package:skripsi/widgets/activity_tile.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -76,114 +79,26 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  TextStyle _getTimeAndSubtitleStyle(String time, {required bool isCheckIn}) {
-    final hour = int.tryParse(time.split(":").first) ?? 0;
-
-    if (((isCheckIn && hour >= 9) || (!isCheckIn && hour < 17) && time != "-")) {
-      return const TextStyle(color: Colors.red, fontWeight: FontWeight.bold);
-    }
-
-    return const TextStyle(color: Colors.black, fontWeight: FontWeight.normal);
-  }
-
-  String _getSubtitle(String time, {required bool isCheckIn}) {
-    final hour = int.tryParse(time.split(":").first) ?? 0;
-
-    if (time == "-") {
-      return isCheckIn ? "Not Clocked In" : "Not Clocked Out";
-    }
-
-    if (isCheckIn) {
-      return hour >= 9 ? "Clock In Late" : "On Time";
-    }
-
-    return hour < 17 ? "Early Clock Out" : "Go Home";
-  }
-
-  void _showImageDialog(String imageUrl) {
+  void _showImageDialog(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                width: double.infinity,
-                height: 300,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return const Center(child: CircularProgressIndicator());
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Center(child: Icon(Icons.broken_image, size: 50));
-                  },
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Close"),
-            ),
-          ],
-        ),
-      ),
+      builder: (context) => ImageDialog(imageUrl: imageUrl),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final profileProvider = Provider.of<ProfileProvider>(context);
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
-    final profileImage = profileProvider.profileImage;
-    final userName = profileProvider.name;
-    final userPosition = profileProvider.position;
 
     final activitiesStream = attendanceProvider.fetchActivities();
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        backgroundColor: AppColors.background2,
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundImage: profileProvider.profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
-              child: profileProvider.profileImage.isEmpty
-                  ? const Icon(Icons.admin_panel_settings, size: 40, color: AppColors.primary)
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                Text(
-                  userPosition,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+          toolbarHeight: 75,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          backgroundColor: AppColors.background2,
+          title: HomeHeaderProfile()),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: StreamBuilder<List<Map<String, dynamic>>>(
@@ -194,19 +109,17 @@ class _HomePageState extends State<HomePage> {
             }
 
             if (snapshot.hasError) {
-              return Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('An error occurred: ${snapshot.error}'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => setState(() {}),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('An error occurred: ${snapshot.error}'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => setState(() {}),
+                      child: const Text('Retry'),
+                    ),
+                  ],
                 ),
               );
             }
@@ -216,7 +129,7 @@ class _HomePageState extends State<HomePage> {
 
             final clockInActivity = activities.firstWhere(
               (activity) => activity['activityType'] == 'Clock In' && activity['date'] == nowDate,
-              orElse: () => {'time': '-'},
+              orElse: () => {'time': '-', 'late': false},
             );
             final clockOutActivity = activities.firstWhere(
               (activity) => activity['activityType'] == 'Clock Out' && activity['date'] == nowDate,
@@ -225,6 +138,7 @@ class _HomePageState extends State<HomePage> {
 
             final clockInTime = clockInActivity['time'] ?? '-';
             final clockOutTime = clockOutActivity['time'] ?? '-';
+            final isLateClockIn = clockInActivity['late'] == true;
 
             final hasClockIn = activities.any((a) => a['activityType'] == 'Clock In' && a['date'] == nowDate);
             final hasClockOut = activities.any((a) => a['activityType'] == 'Clock Out' && a['date'] == nowDate);
@@ -252,47 +166,13 @@ class _HomePageState extends State<HomePage> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Today Attendance",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    AttendanceCard(
-                      title: "Clock In",
-                      time: clockInTime,
-                      subtitle: _getSubtitle(clockInTime, isCheckIn: true),
-                      timeStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
-                      subtitleStyle: _getTimeAndSubtitleStyle(clockInTime, isCheckIn: true),
-                    ),
-                    const SizedBox(width: 16),
-                    AttendanceCard(
-                      title: "Clock Out",
-                      time: clockOutTime,
-                      subtitle: _getSubtitle(clockOutTime, isCheckIn: false),
-                      timeStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
-                      subtitleStyle: _getTimeAndSubtitleStyle(clockOutTime, isCheckIn: false),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _buildClockButton(
-                      label: "Clock In",
-                      isEnabled: !hasClockIn,
-                      onPressed: () => _attemptClock('Clock In'),
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 16),
-                    _buildClockButton(
-                      label: "Clock Out",
-                      isEnabled: hasClockIn && !hasClockOut,
-                      onPressed: () => _attemptClock('Clock Out'),
-                      color: AppColors.cancel,
-                    ),
-                  ],
+                TodayAttendanceSection(
+                  clockInTime: clockInTime,
+                  clockOutTime: clockOutTime,
+                  hasClockIn: hasClockIn,
+                  hasClockOut: hasClockOut,
+                  onClockPressed: _attemptClock,
+                  isLateClockIn: isLateClockIn,
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -305,94 +185,22 @@ class _HomePageState extends State<HomePage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    TextButton.icon(
-                      onPressed: () async {
-                        final selected = await showDialog<DateTime>(
-                          context: context,
-                          builder: (context) {
-                            int tempMonth = selectedMonth.month;
-                            int tempYear = selectedMonth.year;
-                            return AlertDialog(
-                              title: Text(
-                                'Select Month and Year',
-                                style: TextStyle(fontSize: 20),
-                              ),
-                              content: Row(
-                                children: [
-                                  Expanded(
-                                    child: StatefulBuilder(
-                                      builder: (context, setState) {
-                                        return DropdownButton<int>(
-                                          isExpanded: true,
-                                          value: tempMonth,
-                                          items: List.generate(12, (index) {
-                                            return DropdownMenuItem(
-                                              value: index + 1,
-                                              child: Text(DateFormat.MMMM().format(DateTime(0, index + 1))),
-                                            );
-                                          }),
-                                          onChanged: (value) {
-                                            if (value != null) {
-                                              setState(() {
-                                                tempMonth = value;
-                                              });
-                                            }
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: StatefulBuilder(
-                                      builder: (context, setState) {
-                                        return DropdownButton<int>(
-                                          isExpanded: true,
-                                          value: tempYear,
-                                          items: List.generate(5, (index) {
-                                            final year = DateTime.now().year - index;
-                                            return DropdownMenuItem(
-                                              value: year,
-                                              child: Text(year.toString()),
-                                            );
-                                          }),
-                                          onChanged: (value) {
-                                            if (value != null) {
-                                              setState(() {
-                                                tempYear = value;
-                                              });
-                                            }
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop(DateTime(tempYear, tempMonth));
-                                  },
-                                  child: const Text('Confirm'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-
-                        if (selected != null) {
-                          setState(() {
-                            selectedMonth = DateTime(selected.year, selected.month);
-                          });
-                        }
+                    MonthYearFilterDialog(
+                      months: List.generate(12, (i) => DateFormat.MMMM().format(DateTime(0, i + 1))),
+                      years: List.generate(10, (i) => (DateTime.now().year - i).toString()),
+                      selectedMonth: DateFormat.MMMM().format(selectedMonth),
+                      selectedYear: selectedMonth.year.toString(),
+                      onMonthChanged: (month) {
+                        final newMonth = DateFormat.MMMM().parse(month).month;
+                        setState(() {
+                          selectedMonth = DateTime(selectedMonth.year, newMonth);
+                        });
                       },
-                      icon: const Icon(Icons.date_range),
-                      label: Text(DateFormat('MMMM yyyy').format(selectedMonth)),
+                      onYearChanged: (year) {
+                        setState(() {
+                          selectedMonth = DateTime(int.parse(year), selectedMonth.month);
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -448,7 +256,7 @@ class _HomePageState extends State<HomePage> {
                                   date: activity['date'],
                                   onTap: () {
                                     if (imageUrl != null && imageUrl.isNotEmpty) {
-                                      _showImageDialog(imageUrl);
+                                      _showImageDialog(context, imageUrl);
                                     } else {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(content: Text('No image available for this activity')),
@@ -468,32 +276,6 @@ class _HomePageState extends State<HomePage> {
               ],
             );
           },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClockButton({
-    required String label,
-    required bool isEnabled,
-    required VoidCallback? onPressed,
-    required Color color,
-  }) {
-    return Expanded(
-      child: ElevatedButton(
-        onPressed: isEnabled ? onPressed : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isEnabled ? color : AppColors.inactive,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
         ),
       ),
     );

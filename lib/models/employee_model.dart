@@ -5,12 +5,11 @@ class Employee {
   final String nik;
   final String email;
   final String gender;
-  final String dob;
+  final DateTime dob;
   final String pob;
   final String position;
-  final String religion;
   final String address;
-  final String joinDate;
+  final DateTime joinDate;
   final String phone;
 
   Employee({
@@ -23,7 +22,6 @@ class Employee {
     required this.dob,
     required this.pob,
     required this.position,
-    required this.religion,
     required this.address,
     required this.joinDate,
     required this.phone,
@@ -35,12 +33,11 @@ class Employee {
     String? nik,
     String? email,
     String? gender,
-    String? dob,
+    DateTime? dob,
     String? pob,
     String? position,
-    String? religion,
     String? address,
-    String? joinDate,
+    DateTime? joinDate,
     String? phone,
   }) {
     return Employee(
@@ -53,7 +50,6 @@ class Employee {
       dob: dob ?? this.dob,
       pob: pob ?? this.pob,
       position: position ?? this.position,
-      religion: religion ?? this.religion,
       address: address ?? this.address,
       joinDate: joinDate ?? this.joinDate,
       phone: phone ?? this.phone,
@@ -68,13 +64,29 @@ class Employee {
       'nik': nik,
       'email': email,
       'gender': gender,
-      'dob': dob,
+      'dob': dob.toIso8601String(),
       'pob': pob,
       'position': position,
-      'religion': religion,
       'address': address,
-      'joinDate': joinDate,
+      'joinDate': joinDate.toIso8601String(),
       'phone': phone,
     };
+  }
+
+  factory Employee.fromMap(Map<String, dynamic> map) {
+    return Employee(
+      uid: map['uid'] ?? '',
+      no: map['no'] ?? '',
+      name: map['name'] ?? '',
+      nik: map['nik'] ?? '',
+      email: map['email'] ?? '',
+      gender: map['gender'] ?? '',
+      dob: DateTime.tryParse(map['dob'] ?? '') ?? DateTime(1970),
+      pob: map['pob'] ?? '',
+      position: map['position'] ?? '',
+      address: map['address'] ?? '',
+      joinDate: DateTime.tryParse(map['joinDate'] ?? '') ?? DateTime(1970),
+      phone: map['phone'] ?? '',
+    );
   }
 }

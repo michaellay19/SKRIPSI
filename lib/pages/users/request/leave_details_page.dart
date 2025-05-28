@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:skripsi/model/leave_request_model.dart';
+import 'package:skripsi/utility/date_extensions.dart';
+import 'package:skripsi/widgets/detail_row.dart';
 
 class LeaveDetailsPage extends StatelessWidget {
   final String leaveType;
@@ -35,25 +36,13 @@ class LeaveDetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetailRow('Leave Type', leaveType),
-            _buildDetailRow('Start Date', startDate.toFormattedString()),
-            _buildDetailRow('End Date', endDate.toFormattedString()),
-            _buildDetailRow('Reason', reason),
-            _buildDetailRow('Status', status),
+            DetailRow(label: 'Leave Type', value: leaveType),
+            DetailRow(label: 'Start Date', value: startDate.toFormattedString()),
+            DetailRow(label: 'End Date', value: endDate.toFormattedString()),
+            DetailRow(label: 'Reason', value: reason),
+            DetailRow(label: 'Status', value: status),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value, style: const TextStyle(color: Colors.black54))),
-        ],
       ),
     );
   }

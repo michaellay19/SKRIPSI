@@ -24,9 +24,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
 
   Future<void> fetchAttendanceData() async {
     FirebaseFirestore firestore = FirebaseFirestore.instance;
-    DateFormat dateFormat = DateFormat('yyyy-MM-dd');
-
-    String today = dateFormat.format(selectedDate);
 
     try {
       QuerySnapshot usersSnapshot = await firestore.collection('users').get();
@@ -34,15 +31,19 @@ class _AdminHomePageState extends State<AdminHomePage> {
 
       for (var userDoc in usersSnapshot.docs) {
         String userId = userDoc.id;
+        final startOfDay = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+        final endOfDay = startOfDay.add(const Duration(days: 1));
 
-        QuerySnapshot attendanceSnapshot = await firestore
+        AggregateQuerySnapshot attendanceCount = await firestore
             .collection('users')
             .doc(userId)
             .collection('attendance')
-            .where('uploadedAt', isEqualTo: today)
+            .where('uploadedAt', isGreaterThanOrEqualTo: startOfDay)
+            .where('uploadedAt', isLessThan: endOfDay)
+            .count()
             .get();
 
-        bool isPresent = attendanceSnapshot.docs.isNotEmpty;
+        bool isPresent = attendanceCount.count! > 0;
 
         QuerySnapshot leaveSnapshot = await firestore
             .collection('users')
@@ -52,16 +53,16 @@ class _AdminHomePageState extends State<AdminHomePage> {
             .get();
 
         bool isOnLeave = leaveSnapshot.docs.any((doc) {
-          DateTime startDate = DateTime.parse(doc['startDate']);
-          DateTime endDate = DateTime.parse(doc['endDate']);
+          DateTime startDate = (doc['startDate'] as Timestamp).toDate();
+          DateTime endDate = (doc['endDate'] as Timestamp).toDate();
           return selectedDate.isAfter(startDate.subtract(const Duration(days: 1))) &&
               selectedDate.isBefore(endDate.add(const Duration(days: 1)));
         });
 
-        if (isOnLeave) {
-          timeOff++;
-        } else if (isPresent) {
+        if (isPresent) {
           present++;
+        } else if (isOnLeave) {
+          timeOff++;
         } else {
           absent++;
         }

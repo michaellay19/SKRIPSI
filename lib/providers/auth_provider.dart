@@ -1,14 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:skripsi/constants/app_strings.dart';
 import 'package:skripsi/pages/admin/all_admin_pages.dart';
 import 'package:skripsi/pages/users/all_users_pages.dart';
 
 class MyAuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   User? _user;
+  String? _adminEmail;
 
   MyAuthProvider() {
     _auth.authStateChanges().listen((User? user) async {
@@ -21,10 +23,11 @@ class MyAuthProvider with ChangeNotifier {
     });
 
     _loadUserFromLocal();
+    _loadAdminEmailFromFirebase();
   }
 
   User? get user => _user;
-  String get adminEmail => AppStrings.adminEmail;
+  String? get adminEmail => _adminEmail;
 
   Future<void> signIn(String email, String password, BuildContext context) async {
     String trimmedEmail = email.trim();
@@ -36,7 +39,7 @@ class MyAuthProvider with ChangeNotifier {
     }
 
     bool isWeb = kIsWeb;
-    bool isAdmin = trimmedEmail.toLowerCase() == AppStrings.adminEmail;
+    bool isAdmin = trimmedEmail.toLowerCase() == _adminEmail?.toLowerCase();
 
     late BuildContext dialogContext;
 
@@ -99,6 +102,18 @@ class MyAuthProvider with ChangeNotifier {
     await _auth.signOut();
     await _clearLocalUser();
     notifyListeners();
+  }
+
+  Future<void> _loadAdminEmailFromFirebase() async {
+    try {
+      final doc = await _firestore.collection('admin').doc('SSKYW5BxegSrCtrYoOEBjG0Sr853').get();
+      if (doc.exists) {
+        _adminEmail = doc.data()?['email'];
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Failed to load admin email: $e');
+    }
   }
 
   Future<void> _saveUserLocally(String email) async {

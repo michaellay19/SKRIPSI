@@ -1,10 +1,16 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/pages/users/request/leave_details_page.dart';
-import 'package:skripsi/model/leave_request_model.dart';
+import 'package:skripsi/models/leave_request_model.dart';
 import 'package:skripsi/pages/users/request/leave_request_form.dart';
-import 'package:skripsi/provider/request_provider.dart';
+import 'package:skripsi/providers/request_provider.dart';
+import 'package:skripsi/services/leave_service.dart';
+import 'package:skripsi/services/user_service.dart';
+import 'package:skripsi/utility/date_extensions.dart';
+import 'package:skripsi/widgets/confirmation_dialog.dart';
+import 'package:skripsi/widgets/leave_summary_card.dart';
 
 class RequestPage extends StatefulWidget {
   const RequestPage({super.key});
@@ -31,21 +37,18 @@ class _RequestPageState extends State<RequestPage> {
   Future<void> _confirmDelete(BuildContext context, LeaveRequest request) async {
     final leaveRequestProvider = Provider.of<LeaveRequestProvider>(context, listen: false);
 
-    bool? confirm = await showDialog<bool>(
+    bool confirm = false;
+
+    await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Confirm Deletion"),
-        content: Text("Are you sure you want to delete the request for ${request.leaveType}?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Delete", style: TextStyle(color: Colors.red)),
-          ),
-        ],
+      builder: (context) => ConfirmationDialog(
+        title: "Confirm Deletion",
+        content: "Are you sure you want to delete the request for ${request.leaveType}?",
+        confirmText: "Delete",
+        cancelText: "Cancel",
+        onConfirm: () {
+          confirm = true;
+        },
       ),
     );
 
@@ -84,32 +87,47 @@ class _RequestPageState extends State<RequestPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: StreamBuilder<List<LeaveRequest>>(
-              stream: leaveRequestProvider.fetchLeaveRequests(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const SizedBox();
+            child: FutureBuilder<DateTime>(
+              future: UserService.getJoinDate(FirebaseAuth.instance.currentUser!.uid),
+              builder: (context, joinDateSnapshot) {
+                if (joinDateSnapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+                if (joinDateSnapshot.hasError) {
+                  return Text('Error: ${joinDateSnapshot.error}');
+                }
+                if (!joinDateSnapshot.hasData) {
+                  return const Text('Join date not available.');
                 }
 
-                final leaveRequests = snapshot.data!;
-                final total = leaveRequests.length;
-                final approved = leaveRequests.where((r) => r.status.toLowerCase() == 'approved').length;
-                final pending = leaveRequests.where((r) => r.status.toLowerCase() == 'pending').length;
-                final rejected = leaveRequests.where((r) => r.status.toLowerCase() == 'rejected').length;
+                final joinDate = joinDateSnapshot.data!;
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Your Leave Summary',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Total Requests: $total'),
-                    Text('Approved: $approved'),
-                    Text('Pending: $pending'),
-                    Text('Rejected: $rejected'),
-                  ],
+                return StreamBuilder<List<LeaveRequest>>(
+                  stream: leaveRequestProvider.fetchLeaveRequests(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const CircularProgressIndicator();
+                    }
+
+                    final leaveRequests = snapshot.data!;
+                    return FutureBuilder<Map<String, dynamic>>(
+                      future: LeaveService.computeLeaveSummary(leaveRequests, joinDate),
+                      builder: (context, summarySnapshot) {
+                        if (summarySnapshot.connectionState == ConnectionState.waiting) {
+                          return const CircularProgressIndicator();
+                        }
+                        if (summarySnapshot.hasError) {
+                          return Text('Error: ${summarySnapshot.error}');
+                        }
+                        if (!summarySnapshot.hasData) {
+                          return const Text('Unable to compute leave summary.');
+                        }
+
+                        final summary = summarySnapshot.data!;
+                        return LeaveSummaryCard(summary: summary);
+                      },
+                    );
+                  },
                 );
               },
             ),

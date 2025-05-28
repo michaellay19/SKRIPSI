@@ -3,11 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/pages/auth/splash_page.dart';
-import 'package:skripsi/provider/auth_provider.dart';
-import 'package:skripsi/provider/attendance_provider.dart';
-import 'package:skripsi/provider/geofence_provider.dart';
-import 'package:skripsi/provider/profile_provider.dart';
-import 'package:skripsi/provider/request_provider.dart';
+import 'package:skripsi/providers/auth_provider.dart';
+import 'package:skripsi/providers/attendance_provider.dart';
+import 'package:skripsi/providers/geofence_provider.dart';
+import 'package:skripsi/providers/profile_provider.dart';
+import 'package:skripsi/providers/request_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +46,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Attendance App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.cyan),
       home: const SplashScreen(),
     );
   }

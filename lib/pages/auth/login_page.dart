@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/constants/app_strings.dart';
 import 'package:skripsi/pages/auth/forget_password_page.dart';
-import 'package:skripsi/provider/auth_provider.dart';
+import 'package:skripsi/providers/auth_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

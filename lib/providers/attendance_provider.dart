@@ -23,11 +23,22 @@ class AttendanceProvider with ChangeNotifier {
       await ref.putFile(image);
       String downloadUrl = await ref.getDownloadURL();
 
+      final now = DateTime.now();
+      bool isLate = false;
+      bool noDaily = false;
+
+      if (activityType == 'Clock In') {
+        isLate = now.hour > 9 || (now.hour == 9 && now.minute > 3);
+        noDaily = now.hour >= 9 && now.minute > 30;
+      }
+
       Map<String, dynamic> imageData = {
         'url': downloadUrl,
-        'uploadedAt': DateTime.now().toString(),
+        'uploadedAt': Timestamp.now(),
         'userEmail': currentUser.email,
         'activityType': activityType,
+        'late': isLate,
+        'noDaily': noDaily,
       };
 
       await _firestore.collection('users').doc(userId).collection('attendance').add(imageData);
@@ -50,21 +61,26 @@ class AttendanceProvider with ChangeNotifier {
         .collection('attendance')
         .orderBy('uploadedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final uploadedAt = doc['uploadedAt'];
-              final temp = uploadedAt.substring(0, 10);
-              List<String> parts = temp.split('-');
-              final date = '${parts[2]}-${parts[1]}-${parts[0]}';
-              final time = uploadedAt.substring(11, 16);
+        .map((snapshot) => snapshot.docs
+            .map((doc) {
+              final Timestamp uploadedAt = doc['uploadedAt'];
+              final DateTime dateTime = uploadedAt.toDate();
+              final date =
+                  '${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}';
+              final time = '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
               final activityType = doc['activityType'];
+              final bool late = doc.data().containsKey('late') ? doc['late'] : false;
 
               return {
                 'url': doc['url'],
                 'date': date,
                 'time': time,
                 'activityType': activityType,
+                'late': late,
               };
-            }).toList());
+            })
+            .where((element) => element.isNotEmpty)
+            .toList());
   }
 
   Map<String, List<Map<String, dynamic>>> groupActivitiesByDate(List<Map<String, dynamic>> activities) {
@@ -81,17 +97,16 @@ class AttendanceProvider with ChangeNotifier {
 
   int countMonthlyLates(List<Map<String, dynamic>> activities, DateTime selectedMonth) {
     return activities.where((activity) {
-      final type = activity['activityType'];
+      if (activity['activityType'] != 'Clock In') return false;
+
       final dateParts = activity['date'].split('-');
-      if (type != 'Clock In' || dateParts.length != 3) return false;
+      if (dateParts.length != 3) return false;
 
       final activityMonth = int.tryParse(dateParts[1]);
       final activityYear = int.tryParse(dateParts[2]);
       if (activityMonth != selectedMonth.month || activityYear != selectedMonth.year) return false;
 
-      final timeParts = activity['time'].split(':');
-      final hour = int.tryParse(timeParts.first);
-      return hour != null && hour >= 9;
+      return activity['late'] == true;
     }).length;
   }
 }

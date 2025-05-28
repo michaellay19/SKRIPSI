@@ -2,8 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/constants/app_colors.dart';
-import 'package:skripsi/constants/app_strings.dart';
-import 'package:skripsi/provider/profile_provider.dart';
+import 'package:skripsi/providers/profile_provider.dart';
+import 'package:skripsi/utility/lower_case_text_formatter.dart';
 
 class AdminProfilePage extends StatefulWidget {
   const AdminProfilePage({super.key});
@@ -16,7 +16,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
   bool isEditing = false;
   Uint8List? _selectedImage;
   TextEditingController nameController = TextEditingController();
-  TextEditingController emailController = TextEditingController(text: AppStrings.adminEmail);
+  TextEditingController emailController = TextEditingController();
   TextEditingController positionController = TextEditingController();
 
   @override
@@ -26,6 +26,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     profileProvider.loadProfile().then((_) {
       setState(() {
         nameController.text = profileProvider.name;
+        emailController.text = profileProvider.email;
         positionController.text = profileProvider.position;
       });
     }).catchError((error) {
@@ -35,7 +36,12 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
 
   Future<void> _saveProfile() async {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    await profileProvider.updateProfile(nameController.text, positionController.text, null, _selectedImage);
+    await profileProvider.updateProfile(
+      nameController.text,
+      positionController.text,
+      emailController.text.toLowerCase(),
+      adminImage: _selectedImage,
+    );
     setState(() {
       isEditing = false;
     });
@@ -78,7 +84,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
               if (isEditing) ...[_buildImageButtons(profileProvider)],
               const SizedBox(height: 20),
               _buildProfileField("Full Name", nameController),
-              _buildProfileField("Email", emailController, isEditable: false),
+              _buildProfileField("Email", emailController),
               _buildProfileField("position", positionController),
               const SizedBox(height: 20),
               isEditing ? _buildEditModeButtons() : _buildEditButton(),
@@ -128,7 +134,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     );
   }
 
-  Widget _buildProfileField(String label, TextEditingController controller, {bool isEditable = true}) {
+  Widget _buildProfileField(String label, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -143,13 +149,14 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
           const SizedBox(height: 5),
           TextField(
             controller: controller,
-            enabled: isEditing && isEditable,
+            enabled: isEditing,
+            inputFormatters: label == "Email" ? [LowerCaseTextFormatter()] : null,
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              filled: !isEditing || !isEditable,
-              fillColor: isEditing && isEditable ? AppColors.background1 : AppColors.background2,
+              filled: !isEditing,
+              fillColor: isEditing ? AppColors.background1 : AppColors.background2,
               contentPadding: const EdgeInsets.symmetric(horizontal: 15),
             ),
           ),
@@ -173,8 +180,13 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         const SizedBox(width: 10),
         ElevatedButton(
           onPressed: () {
+            final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
             setState(() {
               isEditing = false;
+              _selectedImage = null;
+              nameController.text = profileProvider.name;
+              emailController.text = profileProvider.email;
+              positionController.text = profileProvider.position;
             });
           },
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.cancel),

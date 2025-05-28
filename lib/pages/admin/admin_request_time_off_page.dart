@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:skripsi/constants/app_colors.dart';
 
 class AdminRequestTimeOffPage extends StatefulWidget {
   const AdminRequestTimeOffPage({super.key});
@@ -11,7 +12,7 @@ class AdminRequestTimeOffPage extends StatefulWidget {
 class _AdminRequestTimeOffPageState extends State<AdminRequestTimeOffPage> {
   TextEditingController searchController = TextEditingController();
   String selectedStatus = "All";
-  DateTime? selectedDate = DateTime.now();
+  DateTimeRange? selectedDateRange;
 
   Stream<QuerySnapshot> _fetchLeaveRequests() {
     return FirebaseFirestore.instance.collectionGroup('leave_requests').snapshots();
@@ -65,17 +66,23 @@ class _AdminRequestTimeOffPageState extends State<AdminRequestTimeOffPage> {
                   selectedStatus = value!;
                 });
               },
+              
             ),
             const SizedBox(width: 10),
             ElevatedButton.icon(
               onPressed: () => _selectDate(context),
-              icon: const Icon(Icons.calendar_today),
+              icon: const Icon(
+                Icons.calendar_today,
+                color: AppColors.background2,
+              ),
               label: Text(
-                selectedDate != null ? "${selectedDate!.toLocal()}".split(' ')[0] : "Select Date",
+                selectedDateRange != null
+                    ? "${_formatDate(selectedDateRange!.start)} - ${_formatDate(selectedDateRange!.end)}"
+                    : "Select Date Range",
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyan,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.text1,
               ),
             ),
           ],
@@ -99,9 +106,14 @@ class _AdminRequestTimeOffPageState extends State<AdminRequestTimeOffPage> {
           var data = doc.data() as Map<String, dynamic>;
 
           bool matchesStatus = selectedStatus == "All" || (data["status"] ?? "") == selectedStatus;
-          bool matchesDate = selectedDate == null ||
-              (_isDateInRange(selectedDate!, DateTime.parse(data["startDate"]), DateTime.parse(data["endDate"])));
-
+          bool matchesDate = selectedDateRange == null ||
+              _isRangeOverlap(
+                selectedDateRange!,
+                DateTimeRange(
+                  start: (data["startDate"] as Timestamp).toDate(),
+                  end: (data["endDate"] as Timestamp).toDate(),
+                ),
+              );
           return matchesStatus && matchesDate;
         }).toList();
 
@@ -133,8 +145,8 @@ class _AdminRequestTimeOffPageState extends State<AdminRequestTimeOffPage> {
                     },
                   )),
                   DataCell(Text(data["leaveType"] ?? "-")),
-                  DataCell(Text(_formatDate(DateTime.parse(data["startDate"] ?? "")))),
-                  DataCell(Text(_formatDate(DateTime.parse(data["endDate"] ?? "")))),
+                  DataCell(Text(_formatDate((data["startDate"] as Timestamp).toDate()))),
+                  DataCell(Text(_formatDate((data["endDate"] as Timestamp).toDate()))),
                   DataCell(Text(data["reason"] ?? "-")),
                   DataCell(_buildStatusBadge(data["status"] ?? "Pending")),
                   DataCell(Row(
@@ -189,23 +201,22 @@ class _AdminRequestTimeOffPageState extends State<AdminRequestTimeOffPage> {
     await requestRef.update({"status": newStatus});
   }
 
+  bool _isRangeOverlap(DateTimeRange selected, DateTimeRange request) {
+    return selected.start.isBefore(request.end) && selected.end.isAfter(request.start);
+  }
+
   Future<void> _selectDate(BuildContext context) async {
-    DateTime? picked = await showDatePicker(
+    DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      initialDate: selectedDate ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
+      initialDateRange: selectedDateRange,
     );
     if (picked != null) {
       setState(() {
-        selectedDate = picked;
+        selectedDateRange = picked;
       });
     }
-  }
-
-  bool _isDateInRange(DateTime selected, DateTime start, DateTime end) {
-    return selected.isAfter(start.subtract(const Duration(days: 1))) &&
-        selected.isBefore(end.add(const Duration(days: 1)));
   }
 
   String _formatDate(DateTime date) {

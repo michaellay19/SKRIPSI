@@ -61,10 +61,13 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
         for (var attendanceDoc in attendanceSnapshot.docs) {
           var data = attendanceDoc.data() as Map<String, dynamic>;
           String activityType = data["activityType"];
-          String uploadedAt = data["uploadedAt"];
-          String formattedDate = DateFormat('HH:mm').format(DateTime.parse(uploadedAt));
+
+          Timestamp uploadedAtTimestamp = data["uploadedAt"];
+          DateTime uploadedAt = uploadedAtTimestamp.toDate();
+
+          String formattedDate = DateFormat('HH:mm').format(uploadedAt);
+          String recordDate = DateFormat('yyyy-MM-dd').format(uploadedAt);
           String url = data["url"] ?? "";
-          String recordDate = uploadedAt.split(" ")[0];
 
           if (recordDate == formattedSelectedDate) {
             if (activityType == "Clock In") {
@@ -86,7 +89,6 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
         attendanceList = tempAttendanceList;
         isLoading = false;
       });
-
     } catch (e) {
       debugPrint("Error fetching attendance data: $e");
       setState(() => isLoading = false);

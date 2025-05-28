@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:skripsi/constants/app_colors.dart';
-import 'package:skripsi/model/leave_request_model.dart';
+import 'package:skripsi/constants/app_lists.dart';
+import 'package:skripsi/constants/app_strings.dart';
+import 'package:skripsi/models/leave_request_model.dart';
 
 class LeaveRequestForm extends StatefulWidget {
   final Function(LeaveRequest) onSubmit;
@@ -48,7 +50,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
           startDate: _startDate!,
           endDate: finalEndDate,
           reason: _reasonController.text,
-          status: "Pending",
+          status: AppStrings.leaveStatusPending,
         ),
       );
       Navigator.of(context).pop();
@@ -125,9 +127,7 @@ class _LeaveRequestFormState extends State<LeaveRequestForm> {
         const SizedBox(height: 5),
         DropdownButtonFormField<String>(
           value: value,
-          items: ['Sick Leave', 'Parental Leave', 'Unpaid Leave', 'Personal Leave', 'Attendance Request']
-              .map((type) => DropdownMenuItem(value: type, child: Text(type)))
-              .toList(),
+          items: AppLists.leaveTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),

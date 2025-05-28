@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:skripsi/pages/admin/settings/admin_change_password_page.dart';
+import 'package:skripsi/pages/admin/settings/admin_holiday_dialog.dart';
 import 'package:skripsi/pages/admin/settings/admin_profile_page.dart';
+import 'package:skripsi/pages/admin/settings/admin_shift_dialog.dart';
 
 class AdminSettingPage extends StatefulWidget {
   const AdminSettingPage({super.key});
@@ -10,11 +12,6 @@ class AdminSettingPage extends StatefulWidget {
 }
 
 class _AdminSettingPageState extends State<AdminSettingPage> {
-  bool isDarkMode = false;
-  bool isNotificationEnabled = true;
-  bool isBatterySaver = false;
-  String selectedLanguage = "English";
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,6 +29,18 @@ class _AdminSettingPageState extends State<AdminSettingPage> {
                 ),
               );
             },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.calendar_month),
+            title: const Text("Manage Holidays"),
+            onTap: () => _showHolidayDialog(context),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.schedule),
+            title: const Text("Shift Settings"),
+            onTap: () => _showShiftDialog(context),
           ),
           const Divider(),
           ListTile(
@@ -63,6 +72,20 @@ class _AdminSettingPageState extends State<AdminSettingPage> {
       applicationName: "Attendance App",
       applicationVersion: "1.0.0",
       applicationLegalese: "© 2025 PT. Surya Cemerlang Logistik",
+    );
+  }
+
+  void _showHolidayDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const AdminHolidayDialog(),
+    );
+  }
+
+  void _showShiftDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const AdminShiftDialog(),
     );
   }
 }

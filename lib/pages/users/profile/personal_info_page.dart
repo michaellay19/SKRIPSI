@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:skripsi/model/employee_model.dart';
+import 'package:skripsi/models/employee_model.dart';
 
 class PersonalInfoPage extends StatelessWidget {
   const PersonalInfoPage({super.key});
@@ -21,12 +21,11 @@ class PersonalInfoPage extends StatelessWidget {
       nik: doc['nik'],
       email: doc['email'],
       gender: doc['gender'],
-      dob: doc['dob'],
+      dob: DateTime.tryParse(doc['dob'] ?? '') ?? DateTime(1970),
       pob: doc['pob'],
       position: doc['position'],
-      religion: doc['religion'],
       address: doc['address'],
-      joinDate: doc['joinDate'],
+      joinDate: DateTime.tryParse(doc['joinDate'] ?? '') ?? DateTime(1970),
       phone: doc['phone'],
     );
   }
@@ -55,12 +54,11 @@ class PersonalInfoPage extends StatelessWidget {
                 _buildInfoTile('NIK', employee.nik),
                 _buildInfoTile('Email', employee.email),
                 _buildInfoTile('Gender', employee.gender),
-                _buildInfoTile('Date of Birth', employee.dob),
+                _buildInfoTile('Date of Birth', _formatDate(employee.dob)),
                 _buildInfoTile('Place of Birth', employee.pob),
                 _buildInfoTile('Position', employee.position),
-                _buildInfoTile('Religion', employee.religion),
                 _buildInfoTile('Address', employee.address),
-                _buildInfoTile('Join Date', employee.joinDate),
+                _buildInfoTile('Join Date', _formatDate(employee.joinDate)),
                 _buildInfoTile('Phone', employee.phone),
               ],
             ),
@@ -75,5 +73,9 @@ class PersonalInfoPage extends StatelessWidget {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(value ?? '-'),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 }

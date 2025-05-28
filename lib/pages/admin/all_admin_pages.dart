@@ -10,8 +10,9 @@ import 'package:skripsi/pages/admin/admin_location_page.dart';
 import 'package:skripsi/pages/admin/admin_request_time_off_page.dart';
 import 'package:skripsi/pages/admin/admin_attendance_report_page.dart';
 import 'package:skripsi/pages/auth/login_page.dart';
-import 'package:skripsi/provider/auth_provider.dart';
-import 'package:skripsi/provider/profile_provider.dart';
+import 'package:skripsi/providers/auth_provider.dart';
+import 'package:skripsi/providers/profile_provider.dart';
+import 'package:skripsi/widgets/confirmation_dialog.dart';
 
 class AllAdminPage extends StatefulWidget {
   const AllAdminPage({super.key});
@@ -21,7 +22,7 @@ class AllAdminPage extends StatefulWidget {
 }
 
 class _AllAdminPageState extends State<AllAdminPage> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 6;
 
   final List<Widget> _pages = [
     const AdminHomePage(),
@@ -127,19 +128,12 @@ class _AllAdminPageState extends State<AllAdminPage> {
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Logout"),
-        content: const Text("Are you sure you want to logout?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: _logout,
-            child: const Text("Logout"),
-          ),
-        ],
+      builder: (context) => ConfirmationDialog(
+        title: "Logout",
+        content: "Are you sure you want to logout?",
+        confirmText: "Logout",
+        cancelText: "Cancel",
+        onConfirm: _logout,
       ),
     );
   }

@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:skripsi/constants/app_strings.dart';
 
 class ProfileProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -14,12 +13,14 @@ class ProfileProvider with ChangeNotifier {
   String _name = '';
   String _position = '';
   String _profileImage = '';
+  String _email = '';
   String _faceImage = '';
   bool isAdmin = false;
 
   String get name => _name;
   String get position => _position;
   String get profileImage => _profileImage;
+  String get email => _email;
   String get faceImage => _faceImage;
 
   Future<void> loadProfile() async {
@@ -27,7 +28,8 @@ class ProfileProvider with ChangeNotifier {
       final User? currentUser = _auth.currentUser;
       if (currentUser == null) throw Exception("User  not authenticated");
 
-      if (currentUser.email == AppStrings.adminEmail && kIsWeb) isAdmin = true;
+      final adminDoc = await _firestore.collection('admin').doc(currentUser.uid).get();
+      isAdmin = kIsWeb && adminDoc.exists;
 
       final doc = await _firestore
           .collection(isAdmin ? 'admin' : 'users')
@@ -40,10 +42,12 @@ class ProfileProvider with ChangeNotifier {
         _name = data['name'] ?? "User";
         _position = data['position'] ?? "-";
         _profileImage = data['profileImage'] ?? "";
+        _email = data['email'] ?? currentUser.email ?? "";
       } else {
         _name = "User";
         _position = "-";
         _profileImage = '';
+        _email = currentUser.email ?? "";
       }
 
       if (!isAdmin) {
@@ -63,13 +67,15 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateProfile(String name, String position, [File? profileImage, Uint8List? adminImage]) async {
+  Future<void> updateProfile(String name, String position, String email,
+      {File? profileImage, Uint8List? adminImage}) async {
     try {
       final User? currentUser = _auth.currentUser;
       if (currentUser == null) throw Exception("User  not authenticated");
 
       _name = name;
       _position = position;
+      _email = email;
 
       String fileName =
           isAdmin ? 'admin/${currentUser.uid}.jpg' : 'users/${currentUser.uid}/profile/${currentUser.uid}.jpg';
@@ -89,6 +95,7 @@ class ProfileProvider with ChangeNotifier {
           .set({
         'name': _name,
         'position': _position,
+        'email': _email,
         'profileImage': _profileImage,
       }, SetOptions(merge: true));
 

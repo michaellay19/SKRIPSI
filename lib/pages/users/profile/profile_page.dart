@@ -6,9 +6,10 @@ import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/pages/users/profile/change_password_page.dart';
 import 'package:skripsi/pages/users/profile/personal_info_page.dart';
 import 'package:skripsi/pages/users/profile/terms_and_conditions_page.dart';
-import 'package:skripsi/provider/auth_provider.dart';
-import 'package:skripsi/provider/profile_provider.dart';
+import 'package:skripsi/providers/auth_provider.dart';
+import 'package:skripsi/providers/profile_provider.dart';
 import 'package:skripsi/pages/auth/login_page.dart';
+import 'package:skripsi/widgets/confirmation_dialog.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -42,7 +43,8 @@ class _ProfilePageState extends State<ProfilePage> {
       profileProvider.updateProfile(
         profileProvider.name,
         profileProvider.position,
-        File(image.path),
+        profileProvider.email,
+        profileImage: File(image.path),
       );
     }
   }
@@ -84,11 +86,11 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           children: [
             CircleAvatar(
-              radius: 50,
+              radius: 75,
               backgroundImage:
                   profileProvider.profileImage.isNotEmpty ? NetworkImage(profileProvider.profileImage) : null,
               child: profileProvider.profileImage.isEmpty
-                  ? const Icon(Icons.admin_panel_settings, size: 40, color: AppColors.primary)
+                  ? const Icon(Icons.admin_panel_settings, size: 50, color: AppColors.primary)
                   : null,
             ),
             const SizedBox(height: 10),
@@ -96,8 +98,9 @@ class _ProfilePageState extends State<ProfilePage> {
               profileProvider.name,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 5),
             Text(
-              profileProvider.position,
+              profileProvider.email,
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 20),
@@ -142,19 +145,12 @@ class _ProfilePageState extends State<ProfilePage> {
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Logout"),
-        content: const Text("Are you sure you want to logout?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: _logout,
-            child: const Text("Logout"),
-          ),
-        ],
+      builder: (context) => ConfirmationDialog(
+        title: "Logout",
+        content: "Are you sure you want to logout?",
+        confirmText: "Logout",
+        cancelText: "Cancel",
+        onConfirm: _logout,
       ),
     );
   }
