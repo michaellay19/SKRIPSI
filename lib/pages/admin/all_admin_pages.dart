@@ -22,7 +22,7 @@ class AllAdminPage extends StatefulWidget {
 }
 
 class _AllAdminPageState extends State<AllAdminPage> {
-  int _selectedIndex = 5;
+  int _selectedIndex = 0;
 
   final List<Widget> _pages = [
     const AdminHomePage(),
