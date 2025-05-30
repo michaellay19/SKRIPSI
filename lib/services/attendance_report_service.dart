@@ -112,10 +112,7 @@ class AttendanceService {
     sheet.getRangeByIndex(3, colIndex++).setText("Absent");
     sheet.getRangeByIndex(3, colIndex++).setText("Time Off");
     sheet.getRangeByIndex(3, colIndex++).setText("Late");
-    // sheet.getRangeByIndex(3, colIndex).cellStyle = subHeaderStyle;
 
-    // int lateColIndex = colIndex;
-    // colIndex++;
 
     String getColumnLetter(int colIndex) {
       String columnName = "";

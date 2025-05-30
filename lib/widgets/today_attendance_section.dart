@@ -9,6 +9,7 @@ class TodayAttendanceSection extends StatelessWidget {
   final bool hasClockOut;
   final Function(String) onClockPressed;
   final bool isLateClockIn;
+  final TimeOfDay shiftEnd;
 
   const TodayAttendanceSection({
     super.key,
@@ -18,7 +19,27 @@ class TodayAttendanceSection extends StatelessWidget {
     required this.hasClockOut,
     required this.onClockPressed,
     required this.isLateClockIn,
+    required this.shiftEnd,
   });
+
+  DateTime? _parseTime(String timeStr) {
+    try {
+      final now = DateTime.now();
+      final parts = timeStr.split(":");
+      if (parts.length < 2) return null;
+
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      return DateTime(now.year, now.month, now.day, hour, minute);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  DateTime _shiftEndDateTime() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, shiftEnd.hour, shiftEnd.minute);
+  }
 
   TextStyle _getTimeStyle({
     required String time,
@@ -27,14 +48,16 @@ class TodayAttendanceSection extends StatelessWidget {
   }) {
     if (time == "-") return const TextStyle(color: Colors.black);
 
+    final parsedTime = _parseTime(time);
+    final shiftEndTime = _shiftEndDateTime();
+
     if (isCheckIn) {
       return isLate
           ? const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)
           : const TextStyle(color: Colors.black);
     }
 
-    final hour = int.tryParse(time.split(":").first) ?? 0;
-    if (hour < 17) {
+    if (!isCheckIn && parsedTime != null && parsedTime.isBefore(shiftEndTime)) {
       return const TextStyle(color: Colors.red, fontWeight: FontWeight.bold);
     }
 
@@ -48,10 +71,12 @@ class TodayAttendanceSection extends StatelessWidget {
   }) {
     if (time == "-") return isCheckIn ? "Not Clocked In" : "Not Clocked Out";
 
+    final parsedTime = _parseTime(time);
+    final shiftEndTime = _shiftEndDateTime();
+
     if (isCheckIn) return isLate ? "Clock In Late" : "On Time";
 
-    final hour = int.tryParse(time.split(":").first) ?? 0;
-    return hour < 17 ? "Early Clock Out" : "Go Home";
+    return (parsedTime != null && parsedTime.isBefore(shiftEndTime)) ? "Early Clock Out" : "Go Home";
   }
 
   @override
@@ -85,6 +110,7 @@ class TodayAttendanceSection extends StatelessWidget {
                 isLate: isLateClockIn,
               ),
             ),
+            SizedBox(width: 16),
             AttendanceCard(
               title: "Clock Out",
               time: clockOutTime,

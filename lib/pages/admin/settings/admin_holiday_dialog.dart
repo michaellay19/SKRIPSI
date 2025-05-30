@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:table_calendar/table_calendar.dart';
 
@@ -14,7 +13,6 @@ class AdminHolidayDialog extends StatefulWidget {
 
 class _AdminHolidayDialogState extends State<AdminHolidayDialog> {
   final Set<DateTime> _selectedHolidays = {};
-  final _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -23,8 +21,7 @@ class _AdminHolidayDialogState extends State<AdminHolidayDialog> {
   }
 
   Future<void> _loadHolidays() async {
-    final uid = _auth.currentUser!.uid;
-    final doc = await FirebaseFirestore.instance.collection('admin').doc(uid).get();
+    final doc = await FirebaseFirestore.instance.collection('admin').doc('holiday').get();
 
     final currentYear = DateTime.now().year;
     if (doc.exists) {
@@ -36,7 +33,7 @@ class _AdminHolidayDialogState extends State<AdminHolidayDialog> {
 
       final holidayImported = Map<String, dynamic>.from(data['holidayImported'] ?? {});
       if (holidayImported["$currentYear"] != true) {
-        await _fetchAndCacheIndonesianHolidays(uid, currentYear, holidayImported);
+        await _fetchAndCacheIndonesianHolidays(currentYear, holidayImported);
       }
 
       setState(() {});
@@ -44,14 +41,13 @@ class _AdminHolidayDialogState extends State<AdminHolidayDialog> {
   }
 
   Future<void> _saveHolidays() async {
-    final uid = _auth.currentUser!.uid;
     final holidays = _selectedHolidays.map((d) => d.toIso8601String()).toList();
-    await FirebaseFirestore.instance.collection('admin').doc(uid).set({
+    await FirebaseFirestore.instance.collection('admin').doc('holiday').set({
       'holidays': holidays,
     }, SetOptions(merge: true));
   }
 
-  Future<void> _fetchAndCacheIndonesianHolidays(String uid, int year, Map<String, dynamic> importedYears) async {
+  Future<void> _fetchAndCacheIndonesianHolidays(int year, Map<String, dynamic> importedYears) async {
     try {
       final response = await http.get(
         Uri.parse("https://date.nager.at/api/v3/PublicHolidays/$year/ID"),
@@ -66,7 +62,7 @@ class _AdminHolidayDialogState extends State<AdminHolidayDialog> {
         final formattedDates = _selectedHolidays.map((d) => d.toIso8601String()).toList();
         importedYears["$year"] = true;
 
-        await FirebaseFirestore.instance.collection('admin').doc(uid).set({
+        await FirebaseFirestore.instance.collection('admin').doc('holiday').set({
           'holidays': formattedDates,
           'holidayImported': importedYears,
         }, SetOptions(merge: true));

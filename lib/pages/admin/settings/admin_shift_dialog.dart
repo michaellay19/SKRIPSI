@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class AdminShiftDialog extends StatefulWidget {
   const AdminShiftDialog({super.key});
@@ -10,7 +9,6 @@ class AdminShiftDialog extends StatefulWidget {
 }
 
 class _AdminShiftDialogState extends State<AdminShiftDialog> {
-  final _auth = FirebaseAuth.instance;
   Map<String, TimeOfDay> shiftTimes = {
     'Shift 1 Start': const TimeOfDay(hour: 7, minute: 0),
     'Shift 1 End': const TimeOfDay(hour: 15, minute: 0),
@@ -21,9 +19,11 @@ class _AdminShiftDialogState extends State<AdminShiftDialog> {
   };
 
   Map<String, List<String>> shiftDays = {
-    'Shift 1': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-    'Shift 2': ['Saturday', 'Sunday'],
+    'Shift 1': [],
+    'Shift 2': [],
   };
+
+  int leaveQuota = 21;
 
   @override
   void initState() {
@@ -32,17 +32,14 @@ class _AdminShiftDialogState extends State<AdminShiftDialog> {
   }
 
   Future<void> _loadShifts() async {
-    final uid = _auth.currentUser!.uid;
-    final doc = await FirebaseFirestore.instance.collection('admin').doc(uid).get();
+    final doc = await FirebaseFirestore.instance.collection('admin').doc('shift').get();
     if (doc.exists) {
       final data = doc.data()!;
       if (data['shiftTimes'] != null) {
         setState(() {
           shiftTimes = Map<String, dynamic>.from(data['shiftTimes']).map((key, value) {
-            final time = TimeOfDay(
-              hour: int.parse(value.split(":")[0]),
-              minute: int.parse(value.split(":")[1]),
-            );
+            final parts = value.split(":");
+            final time = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
             return MapEntry(key, time);
           });
         });
@@ -54,18 +51,52 @@ class _AdminShiftDialogState extends State<AdminShiftDialog> {
           });
         });
       }
+      if (data['leaveQuota'] != null) {
+        setState(() {
+          leaveQuota = data['leaveQuota'];
+        });
+      }
     }
   }
 
   Future<void> _saveShifts() async {
-    final uid = _auth.currentUser!.uid;
     final shiftTimeStr =
         shiftTimes.map((key, value) => MapEntry(key, "${value.hour}:${value.minute.toString().padLeft(2, '0')}"));
 
-    await FirebaseFirestore.instance.collection('admin').doc(uid).set({
+    await FirebaseFirestore.instance.collection('admin').doc('shift').set({
       'shiftTimes': shiftTimeStr,
       'shiftDays': shiftDays,
+      'leaveQuota': leaveQuota,
     }, SetOptions(merge: true));
+  }
+
+  Future<void> _editLeaveQuota() async {
+    final controller = TextEditingController(text: leaveQuota.toString());
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Set Leave Quota"),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: "Leave Quota"),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+              onPressed: () {
+                final parsed = int.tryParse(controller.text);
+                if (parsed != null) Navigator.pop(context, parsed);
+              },
+              child: const Text("Save")),
+        ],
+      ),
+    );
+    if (result != null) {
+      setState(() {
+        leaveQuota = result;
+      });
+    }
   }
 
   @override
@@ -78,52 +109,90 @@ class _AdminShiftDialogState extends State<AdminShiftDialog> {
           children: [
             const Text("Shift Configuration", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            ...shiftTimes.entries.map((entry) {
-              return ListTile(
-                title: Text(entry.key),
-                trailing: Text(entry.value.format(context)),
+            for (var key in [
+              'Shift 1 Start',
+              'Shift 1 End',
+              'Shift 2 Start',
+              'Shift 2 End',
+              'Late Tolerance',
+              'No Daily Wage Tolerance',
+            ])
+              ListTile(
+                title: Text(key),
+                trailing: Text(shiftTimes[key]!.format(context)),
                 onTap: () async {
                   final picked = await showTimePicker(
                     context: context,
-                    initialTime: entry.value,
+                    initialTime: shiftTimes[key]!,
+                    builder: (context, child) {
+                      return MediaQuery(
+                        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+                        child: child!,
+                      );
+                    },
+                    initialEntryMode: TimePickerEntryMode.input,
                   );
+
                   if (picked != null) {
                     setState(() {
-                      shiftTimes[entry.key] = picked;
+                      shiftTimes[key] = picked;
                     });
                   }
                 },
-              );
-            }),
+              ),
+            ListTile(
+              title: const Text("Leave Quota"),
+              trailing: Text("$leaveQuota"),
+              onTap: _editLeaveQuota,
+            ),
             const Divider(),
-            ...shiftDays.entries.map((entry) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("${entry.key} Days"),
-                  Wrap(
-                    spacing: 4,
+            for (var shift in ['Shift 1', 'Shift 2'])
+              Builder(
+                builder: (_) {
+                  final entry = MapEntry(shift, shiftDays[shift]!);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (var day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
-                        FilterChip(
-                          label: Text(day),
-                          selected: entry.value.contains(day),
-                          onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                shiftDays[entry.key]!.add(day);
-                              } else {
-                                shiftDays[entry.key]!.remove(day);
-                              }
-                            });
-                          },
-                        ),
+                      Text("${entry.key} Days"),
+                      Wrap(
+                        spacing: 4,
+                        children: [
+                          for (var day in [
+                            'Monday',
+                            'Tuesday',
+                            'Wednesday',
+                            'Thursday',
+                            'Friday',
+                            'Saturday',
+                            'Sunday'
+                          ])
+                            FilterChip(
+                              label: Text(day),
+                              selected: entry.value.contains(day),
+                              onSelected: (selected) {
+                                setState(() {
+                                  final currentShift = entry.key;
+                                  final otherShift = currentShift == 'Shift 1' ? 'Shift 2' : 'Shift 1';
+
+                                  // Remove from both first
+                                  shiftDays[currentShift]!.remove(day);
+                                  shiftDays[otherShift]!.remove(day);
+
+                                  // Add if selected
+                                  if (selected) {
+                                    shiftDays[currentShift]!.add(day);
+                                  }
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
                     ],
-                  ),
-                  const SizedBox(height: 18),
-                ],
-              );
-            }),
+                  );
+                },
+              ),
+            const SizedBox(height: 16),
             TextButton(
               onPressed: () async {
                 await _saveShifts();

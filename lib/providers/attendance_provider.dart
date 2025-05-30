@@ -15,21 +15,53 @@ class AttendanceProvider with ChangeNotifier {
       if (currentUser == null) {
         throw Exception("No authenticated user found");
       }
-      final String userId = currentUser.uid;
 
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      Reference ref = _storage.ref().child('users/$userId/attendance/$fileName.jpg');
+      final String userId = currentUser.uid;
+      final String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      final Reference ref = _storage.ref().child('users/$userId/attendance/$fileName.jpg');
 
       await ref.putFile(image);
-      String downloadUrl = await ref.getDownloadURL();
+      final String downloadUrl = await ref.getDownloadURL();
 
       final now = DateTime.now();
+
+      final shiftDoc = await _firestore.collection('admin').doc('shift').get();
+      final shiftData = shiftDoc.data()!;
+      final shiftTimes = Map<String, String>.from(shiftData['shiftTimes']);
+      final shiftDays = Map<String, dynamic>.from(shiftData['shiftDays']);
+
+      final today = now.weekday;
+      final weekday = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][today - 1];
+
+      String? currentShift;
+      if (shiftDays['Shift 1']?.contains(weekday) == true) {
+        currentShift = 'Shift 1';
+      } else if (shiftDays['Shift 2']?.contains(weekday) == true) {
+        currentShift = 'Shift 2';
+      }
+
+      if (currentShift == null) {
+        throw Exception("No shift assigned for today.");
+      }
+
+      TimeOfDay parseTime(String str) {
+        final parts = str.split(':');
+        return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+      }
+
+      final lateTolerance = parseTime(shiftTimes['Late Tolerance']!);
+      final noDailyTolerance = parseTime(shiftTimes['No Daily Wage Tolerance']!);
+
       bool isLate = false;
       bool noDaily = false;
 
       if (activityType == 'Clock In') {
-        isLate = now.hour > 9 || (now.hour == 9 && now.minute > 3);
-        noDaily = now.hour >= 9 && now.minute > 30;
+        final nowMinutes = now.hour * 60 + now.minute;
+        final lateMinutes = lateTolerance.hour * 60 + lateTolerance.minute;
+        final noDailyMinutes = noDailyTolerance.hour * 60 + noDailyTolerance.minute;
+
+        isLate = nowMinutes >= lateMinutes;
+        noDaily = nowMinutes >= noDailyMinutes;
       }
 
       Map<String, dynamic> imageData = {
@@ -42,7 +74,6 @@ class AttendanceProvider with ChangeNotifier {
       };
 
       await _firestore.collection('users').doc(userId).collection('attendance').add(imageData);
-
       print('Image data saved successfully to Firestore.');
     } catch (e) {
       print('Error uploading image: $e');
@@ -108,5 +139,33 @@ class AttendanceProvider with ChangeNotifier {
 
       return activity['late'] == true;
     }).length;
+  }
+
+  Future<TimeOfDay?> getTodayShiftEndTime() async {
+    final now = DateTime.now();
+
+    final shiftDoc = await _firestore.collection('admin').doc('shift').get();
+    final shiftData = shiftDoc.data();
+    if (shiftData == null) return null;
+
+    final shiftTimes = Map<String, String>.from(shiftData['shiftTimes']);
+    final shiftDays = Map<String, dynamic>.from(shiftData['shiftDays']);
+
+    final weekday = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][now.weekday - 1];
+
+    String? currentShift;
+    if (shiftDays['Shift 1']?.contains(weekday) == true) {
+      currentShift = 'Shift 1';
+    } else if (shiftDays['Shift 2']?.contains(weekday) == true) {
+      currentShift = 'Shift 2';
+    } else {
+      return null;
+    }
+
+    final endStr = shiftTimes['$currentShift End'];
+    if (endStr == null) return null;
+
+    final parts = endStr.split(':');
+    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
   }
 }

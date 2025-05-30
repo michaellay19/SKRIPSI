@@ -4,13 +4,13 @@ import 'package:skripsi/utility/holiday_utils.dart';
 
 class LeaveService {
   static Future<Map<String, dynamic>> computeLeaveSummary(List<LeaveRequest> requests, DateTime joinDate) async {
-    final doc = await FirebaseFirestore.instance.collection('admin').doc('SSKYW5BxegSrCtrYoOEBjG0Sr853').get();
-
-    final holidaysField = doc.data()?['holidays'] as List<dynamic>? ?? [];
-
+    final holidayDoc = await FirebaseFirestore.instance.collection('admin').doc('holiday').get();
+    final holidaysField = holidayDoc.data()?['holidays'] as List<dynamic>? ?? [];
     final holidays = holidaysField.map((dateStr) => DateTime.parse(dateStr as String)).toSet();
-
     HolidayUtils.setHolidays(holidays);
+
+    final shiftDoc = await FirebaseFirestore.instance.collection('admin').doc('shift').get();
+    final totalQuota = shiftDoc.data()?['leaveQuota'] as int? ?? 21;
 
     int total = 0;
     int approved = 0;
@@ -47,7 +47,6 @@ class LeaveService {
       }
     }
 
-    int totalQuota = 21;
     final quotaLeft = (totalQuota - annualLeaveUsedDays).clamp(0, totalQuota);
 
     return {

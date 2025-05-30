@@ -146,13 +146,13 @@ class _HomePageState extends State<HomePage> {
             final lateCount = attendanceProvider.countMonthlyLates(activities, selectedMonth);
 
             final selectedMonthActivities = activities.where((activity) {
-              final parts = activity['date'].split('-');
-              if (parts.length == 3) {
-                final month = int.parse(parts[1]);
-                final year = int.parse(parts[2]);
-                return month == selectedMonth.month && year == selectedMonth.year;
+              try {
+                final date = DateFormat('dd-MM-yyyy').parseStrict(activity['date']);
+                return date.month == selectedMonth.month && date.year == selectedMonth.year;
+              } catch (e) {
+                debugPrint('Invalid date format in activity: ${activity['date']}');
+                return false;
               }
-              return false;
             }).toList();
 
             final groupedActivities = attendanceProvider.groupActivitiesByDate(selectedMonthActivities);
@@ -163,117 +163,132 @@ class _HomePageState extends State<HomePage> {
                 return bDate.compareTo(aDate);
               });
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TodayAttendanceSection(
-                  clockInTime: clockInTime,
-                  clockOutTime: clockOutTime,
-                  hasClockIn: hasClockIn,
-                  hasClockOut: hasClockOut,
-                  onClockPressed: _attemptClock,
-                  isLateClockIn: isLateClockIn,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return FutureBuilder<TimeOfDay?>(
+              future: attendanceProvider.getTodayShiftEndTime(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final shiftEnd = snapshot.data;
+                if (shiftEnd == null) {
+                  return const Center(child: Text('No shift end time available for today.'));
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Your Activity",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    TodayAttendanceSection(
+                      clockInTime: clockInTime,
+                      clockOutTime: clockOutTime,
+                      hasClockIn: hasClockIn,
+                      hasClockOut: hasClockOut,
+                      onClockPressed: _attemptClock,
+                      isLateClockIn: isLateClockIn,
+                      shiftEnd: shiftEnd,
                     ),
-                    MonthYearFilterDialog(
-                      months: List.generate(12, (i) => DateFormat.MMMM().format(DateTime(0, i + 1))),
-                      years: List.generate(10, (i) => (DateTime.now().year - i).toString()),
-                      selectedMonth: DateFormat.MMMM().format(selectedMonth),
-                      selectedYear: selectedMonth.year.toString(),
-                      onMonthChanged: (month) {
-                        final newMonth = DateFormat.MMMM().parse(month).month;
-                        setState(() {
-                          selectedMonth = DateTime(selectedMonth.year, newMonth);
-                        });
-                      },
-                      onYearChanged: (year) {
-                        setState(() {
-                          selectedMonth = DateTime(int.parse(year), selectedMonth.month);
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Row(
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.access_time, color: AppColors.cancel),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "This Month Late",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              "$lateCount times",
-                              style: const TextStyle(fontSize: 14, color: Colors.black54),
-                            ),
-                          ],
+                        const Text(
+                          "Your Activity",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        MonthYearFilterDialog(
+                          months: List.generate(12, (i) => DateFormat.MMMM().format(DateTime(0, i + 1))),
+                          years: List.generate(10, (i) => (DateTime.now().year - i).toString()),
+                          selectedMonth: DateFormat.MMMM().format(selectedMonth),
+                          selectedYear: selectedMonth.year.toString(),
+                          onMonthChanged: (month) {
+                            final newMonth = DateFormat.MMMM().parse(month).month;
+                            setState(() {
+                              selectedMonth = DateTime(selectedMonth.year, newMonth);
+                            });
+                          },
+                          onYearChanged: (year) {
+                            setState(() {
+                              selectedMonth = DateTime(int.parse(year), selectedMonth.month);
+                            });
+                          },
                         ),
                       ],
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: ListView(
-                    children: [
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: sortedKeys.length,
-                        itemBuilder: (context, index) {
-                          final date = sortedKeys[index];
-                          final items = groupedActivities[date]!;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                date,
-                                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                              ),
-                              const Divider(thickness: 1),
-                              ...items.map((activity) {
-                                final imageUrl = activity['url'];
-                                return ActivityTile(
-                                  title: activity['activityType'] ?? 'Unknown',
-                                  time: activity['time'],
-                                  date: activity['date'],
-                                  onTap: () {
-                                    if (imageUrl != null && imageUrl.isNotEmpty) {
-                                      _showImageDialog(context, imageUrl);
-                                    } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('No image available for this activity')),
-                                      );
-                                    }
-                                  },
-                                );
-                              }),
-                              const SizedBox(height: 12),
-                            ],
-                          );
-                        },
+                    Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.access_time, color: AppColors.cancel),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "This Month Late",
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  "$lateCount times",
+                                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                    Expanded(
+                      child: ListView(
+                        children: [
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: sortedKeys.length,
+                            itemBuilder: (context, index) {
+                              final date = sortedKeys[index];
+                              final items = groupedActivities[date]!;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    date,
+                                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                                  ),
+                                  const Divider(thickness: 1),
+                                  ...items.map((activity) {
+                                    final imageUrl = activity['url'];
+                                    return ActivityTile(
+                                      title: activity['activityType'] ?? 'Unknown',
+                                      time: activity['time'],
+                                      date: activity['date'],
+                                      onTap: () {
+                                        if (imageUrl != null && imageUrl.isNotEmpty) {
+                                          _showImageDialog(context, imageUrl);
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('No image available for this activity')),
+                                          );
+                                        }
+                                      },
+                                    );
+                                  }),
+                                  const SizedBox(height: 12),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),
