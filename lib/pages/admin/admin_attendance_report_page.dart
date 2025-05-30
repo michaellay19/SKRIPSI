@@ -101,6 +101,7 @@ class _AdminAttendanceReportPageState extends State<AdminAttendanceReportPage> {
 
     final AttendanceService service = AttendanceService();
     final data = await service.fetchAttendanceData(year, month, allDates);
+    final holiday = await service.fetchHolidays();
 
     await service.exportToExcel(
       title,
@@ -109,6 +110,7 @@ class _AdminAttendanceReportPageState extends State<AdminAttendanceReportPage> {
       allDates,
       dayNames,
       data,
+      holiday,
     );
   }
 
