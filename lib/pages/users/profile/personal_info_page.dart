@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:skripsi/models/employee_model.dart';
+import 'package:skripsi/utility/date_extensions.dart';
 
 class PersonalInfoPage extends StatelessWidget {
   const PersonalInfoPage({super.key});
@@ -54,11 +55,11 @@ class PersonalInfoPage extends StatelessWidget {
                 _buildInfoTile('NIK', employee.nik),
                 _buildInfoTile('Email', employee.email),
                 _buildInfoTile('Gender', employee.gender),
-                _buildInfoTile('Date of Birth', _formatDate(employee.dob)),
+                _buildInfoTile('Date of Birth', employee.dob.toFormattedString()),
                 _buildInfoTile('Place of Birth', employee.pob),
                 _buildInfoTile('Position', employee.position),
                 _buildInfoTile('Address', employee.address),
-                _buildInfoTile('Join Date', _formatDate(employee.joinDate)),
+                _buildInfoTile('Join Date', employee.joinDate.toFormattedString()),
                 _buildInfoTile('Phone', employee.phone),
               ],
             ),
@@ -73,9 +74,5 @@ class PersonalInfoPage extends StatelessWidget {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(value ?? '-'),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 }

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
@@ -13,6 +14,7 @@ class AdminLocationPage extends StatefulWidget {
 }
 
 class _AdminLocationPageState extends State<AdminLocationPage> {
+  final TextEditingController _radiusController = TextEditingController();
   LatLng? _selectedLocation;
   double radius = 50;
   bool isLoading = true;
@@ -22,6 +24,7 @@ class _AdminLocationPageState extends State<AdminLocationPage> {
   @override
   void initState() {
     super.initState();
+    _radiusController.text = radius.toString();
     _loadLocation();
   }
 
@@ -33,6 +36,7 @@ class _AdminLocationPageState extends State<AdminLocationPage> {
         setState(() {
           _selectedLocation = LatLng(doc['latitude'], doc['longitude']);
           radius = doc['radius'].toDouble();
+          _radiusController.text = radius.toString();
           zoom = doc['zoom'].toDouble();
         });
       }
@@ -49,6 +53,13 @@ class _AdminLocationPageState extends State<AdminLocationPage> {
     if (_selectedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select a location on the map.")),
+      );
+      return;
+    }
+
+    if (radius <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Radius must be a positive number.")),
       );
       return;
     }
@@ -147,11 +158,17 @@ class _AdminLocationPageState extends State<AdminLocationPage> {
                             labelText: 'Radius (meters)',
                             border: OutlineInputBorder(),
                           ),
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                          ],
                           onChanged: (value) {
-                            setState(() {
-                              radius = double.tryParse(value) ?? 0;
-                            });
+                            final parsed = double.tryParse(value);
+                            if (parsed != null && parsed > 0) {
+                              setState(() {
+                                radius = parsed;
+                              });
+                            }
                           },
                         ),
                       ),

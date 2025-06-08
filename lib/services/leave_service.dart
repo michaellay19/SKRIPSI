@@ -22,9 +22,6 @@ class LeaveService {
     for (var request in requests) {
       final days = HolidayUtils.getWorkingDaysBetween(request.startDate, request.endDate);
 
-      print(
-          'Request: ${request.leaveType}, Status: ${request.status}, Start: ${request.startDate}, End: ${request.endDate}, Days: $days');
-
       total++;
 
       if (request.leaveType == 'Attendance Request') {

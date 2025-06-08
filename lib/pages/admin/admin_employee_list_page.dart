@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/models/employee_model.dart';
 import 'package:skripsi/models/leave_request_model.dart';
@@ -177,11 +178,11 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
       "nik": controllers["nik"]!.text,
       "email": newEmail,
       "gender": controllers["gender"]!.text,
-      "dob": controllers["dob"]!.text,
+      "dob": DateFormat("yyyy-MM-dd").format(DateFormat("dd-MM-yyyy").parse(controllers["dob"]!.text)),
       "pob": controllers["pob"]!.text,
       "position": controllers["position"]!.text,
       "address": controllers["address"]!.text,
-      "joinDate": controllers["joinDate"]!.text,
+      "joinDate": DateFormat("yyyy-MM-dd").format(DateFormat("dd-MM-yyyy").parse(controllers["joinDate"]!.text)),
       "phone": controllers["phone"]!.text,
     };
 
@@ -332,7 +333,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
       final snapshot =
           await FirebaseFirestore.instance.collection('users').doc(employee.uid).collection('leave_requests').get();
       final leaveRequests = snapshot.docs.map((doc) => LeaveRequest.fromMap(doc.id, doc.data())).toList();
-      final summary =await LeaveService.computeLeaveSummary(leaveRequests, employee.joinDate);
+      final summary = await LeaveService.computeLeaveSummary(leaveRequests, employee.joinDate);
 
       showDialog(
         context: context,
@@ -420,6 +421,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.image, color: Colors.teal),
+                                    tooltip: "Face Registered",
                                     onPressed: () => _showEmployeeFaceImage(employee.uid),
                                   ),
                                   IconButton(
@@ -429,14 +431,17 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.visibility, color: Colors.orange),
+                                    tooltip: "Employee Details",
                                     onPressed: () => _showEmployeeDetails(employee),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.edit, color: Colors.blue),
+                                    tooltip: "Edit Employee",
                                     onPressed: () => _showEmployeeDialog(employee: employee),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete, color: Colors.red),
+                                    tooltip: "Delete Employee",
                                     onPressed: () => _confirmDelete(employee),
                                   ),
                                 ],

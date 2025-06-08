@@ -35,7 +35,11 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = "Error: ${e.toString()}";
+          String errorMessage = "An error occurred.";
+          if (e is FirebaseAuthException) {
+            errorMessage = e.message ?? errorMessage;
+          }
+          _errorMessage = errorMessage;
         });
       }
     }
