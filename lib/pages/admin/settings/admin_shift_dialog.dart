@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AdminShiftDialog extends StatefulWidget {
   const AdminShiftDialog({super.key});
@@ -72,21 +73,42 @@ class _AdminShiftDialogState extends State<AdminShiftDialog> {
 
   Future<void> _editLeaveQuota() async {
     final controller = TextEditingController(text: leaveQuota.toString());
+    final formKey = GlobalKey<FormState>();
     final result = await showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Set Leave Quota"),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: "Leave Quota"),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+            decoration: const InputDecoration(labelText: "Leave Quota"),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+            ],
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Leave quota is required';
+              }
+              if (int.tryParse(value) == null) {
+                return 'Please input valid number.';
+              }
+              return null;
+            },
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
           TextButton(
               onPressed: () {
-                final parsed = int.tryParse(controller.text);
-                if (parsed != null) Navigator.pop(context, parsed);
+                if (formKey.currentState!.validate()) {
+                  final parsed = int.tryParse(controller.text);
+                  Navigator.pop(context, parsed);
+                }
               },
               child: const Text("Save")),
         ],

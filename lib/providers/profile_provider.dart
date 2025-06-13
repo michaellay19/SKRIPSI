@@ -116,23 +116,24 @@ class ProfileProvider with ChangeNotifier {
   }
 
   Future<void> changePassword(String currentPassword, String newPassword) async {
-    try {
-      final User? user = _auth.currentUser;
-      if (user == null) throw Exception("User not authenticated");
+    final User? user = _auth.currentUser;
+    if (user == null) throw Exception("User not authenticated");
 
+    try {
       AuthCredential credential = EmailAuthProvider.credential(
         email: user.email!,
         password: currentPassword,
       );
-
       await user.reauthenticateWithCredential(credential);
 
-      await user.updatePassword(newPassword);
+      if (currentPassword == newPassword) {
+        throw Exception("New password must be different from the current password!");
+      }
 
+      await user.updatePassword(newPassword);
       debugPrint("Password updated successfully!");
-    } on FirebaseAuthException catch (e) {
-      debugPrint("Failed to change password: ${e.message}");
-      throw Exception(e.message);
+    } on FirebaseAuthException {
+      throw Exception("Current password is incorrect!");
     }
   }
 

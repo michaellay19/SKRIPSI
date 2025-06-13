@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:skripsi/constants/app_colors.dart';
 import 'package:skripsi/models/employee_model.dart';
@@ -124,7 +125,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
               child: Column(
                 children: [
                   _buildField(controllers["name"]!, "Name", isRequired: true),
-                  _buildField(controllers["nik"]!, "NIK", isNik: true, isRequired: true),
+                  _buildField(controllers["nik"]!, "NIK", isNik: true, isRequired: true, isNumeric: true),
                   _buildField(controllers["email"]!, "Email", isRequired: true),
                   _buildGenderField(controllers["gender"]!, "Gender"),
                   _buildField(controllers["dob"]!, "Date of Birth", isDate: true),
@@ -132,7 +133,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
                   _buildField(controllers["position"]!, "Position"),
                   _buildField(controllers["address"]!, "Address"),
                   _buildField(controllers["joinDate"]!, "Join Date", isDate: true),
-                  _buildField(controllers["phone"]!, "Phone"),
+                  _buildField(controllers["phone"]!, "Phone", isNumeric: true),
                 ],
               ),
             ),
@@ -459,7 +460,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
   }
 
   Widget _buildField(TextEditingController controller, String label,
-      {bool isNik = false, bool isDate = false, bool isRequired = false}) {
+      {bool isNik = false, bool isDate = false, bool isRequired = false, isNumeric = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: TextFormField(
@@ -471,6 +472,8 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
           border: const OutlineInputBorder(),
           suffixIcon: isDate ? const Icon(Icons.calendar_today) : null,
         ),
+        keyboardType: isNumeric ? TextInputType.numberWithOptions(decimal: true, signed: false) : null,
+        inputFormatters: isNumeric ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))] : null,
         validator: (value) {
           if (isRequired && (value == null || value.isEmpty)) {
             return "$label is required";

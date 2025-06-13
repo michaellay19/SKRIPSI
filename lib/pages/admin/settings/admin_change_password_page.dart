@@ -29,9 +29,10 @@ class _AdminChangePasswordPageState extends State<AdminChangePasswordPage> {
 
   void _changePassword() async {
     if (_formKey.currentState!.validate()) {
+      final currentPassword = _controllers["Current Password"]!.text;
+      final newPassword = _controllers["New Password"]!.text;
       try {
-        await Provider.of<ProfileProvider>(context, listen: false)
-            .changePassword(_controllers["Current Password"]!.text, _controllers["New Password"]!.text);
+        await Provider.of<ProfileProvider>(context, listen: false).changePassword(currentPassword, newPassword);
 
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -39,7 +40,7 @@ class _AdminChangePasswordPageState extends State<AdminChangePasswordPage> {
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Current password is incorrect!")),
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
       }
     }
