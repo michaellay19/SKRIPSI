@@ -30,7 +30,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         positionController.text = profileProvider.position;
       });
     }).catchError((error) {
-      print("Error loading profile: \$error");
+      debugPrint("Error loading profile: \$error");
     });
   }
 

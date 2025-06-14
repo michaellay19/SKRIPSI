@@ -38,7 +38,6 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
           ..addAll(loadedEmployees);
       });
     } catch (e) {
-      print("Failed to load employees: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to load employees")),
       );
@@ -220,7 +219,6 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
 
       Navigator.pop(context);
     } catch (e) {
-      print(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: ${e.toString()}")),
       );
@@ -325,7 +323,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         const SnackBar(content: Text("Employee deleted successfully")),
       );
     } catch (e) {
-      print("Error deleting user: $e");
+      debugPrint("Error deleting user: $e");
     }
   }
 
@@ -357,7 +355,6 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         ),
       );
     } catch (e) {
-      print("Failed to load leave summary: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to load leave summary")),
       );

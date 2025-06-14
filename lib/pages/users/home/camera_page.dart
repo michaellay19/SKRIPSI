@@ -120,7 +120,6 @@ class CameraPageState extends State<CameraPage> {
           if (faces.isNotEmpty) {
             bool isLive = checkLiveness(faces);
             if (isLive && !isDetecting) {
-              print("✅ Stopping stream after confirming liveness.");
               await _controller!.stopImageStream();
             }
           }
@@ -145,19 +144,16 @@ class CameraPageState extends State<CameraPage> {
     if (!_hasBlinked && _checkBlink(face)) {
       _hasBlinked = true;
       _lastActionTime = DateTime.now();
-      print("✅ Blink detected!");
     }
 
     if (!_hasSmiled && _checkSmile(face)) {
       _hasSmiled = true;
       _lastActionTime = DateTime.now();
-      print("✅ Smile detected!");
     }
 
     if (!_hasMovedHead && _checkHeadMovement(face)) {
       _hasMovedHead = true;
       _lastActionTime = DateTime.now();
-      print("✅ Head movement detected!");
     }
 
     final actionsCompleted = [_hasBlinked, _hasSmiled, _hasMovedHead].where((x) => x).length;
@@ -255,7 +251,7 @@ class CameraPageState extends State<CameraPage> {
         }
       }
     } catch (e) {
-      print('Error capturing face: $e');
+      debugPrint('Error capturing face: $e');
     } finally {
       setState(() {
         isDetecting = false;
@@ -284,7 +280,6 @@ class CameraPageState extends State<CameraPage> {
       fullImage = img.bakeOrientation(fullImage);
 
       if (_latestFaceBoundingBox == null) {
-        print("❌ No cached face bounding box.");
         return null;
       }
 
@@ -327,10 +322,9 @@ class CameraPageState extends State<CameraPage> {
       final String croppedPath = '${imageFile.path}_cropped.jpg';
       File croppedFile = File(croppedPath)..writeAsBytesSync(img.encodeJpg(croppedFace));
 
-      print("Face successfully cropped and saved!");
       return croppedFile;
     } catch (e) {
-      print("Error cropping face: $e");
+      debugPrint("Error cropping face: $e");
       return null;
     }
   }
@@ -355,7 +349,6 @@ class CameraPageState extends State<CameraPage> {
       isDetecting = false;
     });
 
-    print("Profile image captured and saved!");
     print("embeddings : $embeddings");
 
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
@@ -368,7 +361,6 @@ class CameraPageState extends State<CameraPage> {
     final bool isFrontCamera = _controller!.description.lensDirection == cameraDirection;
     if (isFrontCamera) {
       fullImage = img.flipHorizontal(fullImage);
-      print("Image flipped for front camera correction.");
     }
 
     Face face = detectedFaces[0];

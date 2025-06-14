@@ -41,7 +41,7 @@ class _AdminLocationPageState extends State<AdminLocationPage> {
         });
       }
     } catch (e) {
-      print("Error loading location: $e");
+      debugPrint("Error loading location: $e");
     } finally {
       setState(() {
         isLoading = false;

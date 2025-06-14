@@ -112,7 +112,7 @@ class MyAuthProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Failed to load admin email: $e');
+      debugPrint('Failed to load admin email: $e');
     }
   }
 
@@ -130,7 +130,7 @@ class MyAuthProvider with ChangeNotifier {
         _user = _auth.currentUser;
         notifyListeners();
       } catch (e) {
-        print("Error auto-login: $e");
+        debugPrint("Error auto-login: $e");
       }
     }
   }

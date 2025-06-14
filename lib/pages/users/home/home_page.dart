@@ -150,7 +150,6 @@ class _HomePageState extends State<HomePage> {
                 final date = DateFormat('dd-MM-yyyy').parseStrict(activity['date']);
                 return date.month == selectedMonth.month && date.year == selectedMonth.year;
               } catch (e) {
-                debugPrint('Invalid date format in activity: ${activity['date']}');
                 return false;
               }
             }).toList();

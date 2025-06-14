@@ -77,7 +77,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
         isLoading = false;
       });
     } catch (e) {
-      print("Error fetching data: $e");
+      debugPrint("Error fetching data: $e");
       setState(() => isLoading = false);
     }
   }

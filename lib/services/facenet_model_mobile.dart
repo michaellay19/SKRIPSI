@@ -17,11 +17,11 @@ class FaceNetModel {
 
   Future<void> _loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('assets/facenet_model(11).tflite');
+      _interpreter = await Interpreter.fromAsset('assets/mobilefacenet.tflite');
       _interpreter.allocateTensors();
       _inputShape = _interpreter.getInputTensor(0).shape;
       _outputShape = _interpreter.getOutputTensor(0).shape;
-      print("Model loaded. Input: $_inputShape, Output: $_outputShape");
+      debugPrint("Model loaded. Input: $_inputShape, Output: $_outputShape");
     } catch (e) {
       throw ("Failed to load model: $e");
     }
@@ -31,11 +31,18 @@ class FaceNetModel {
     img.Image? image = img.decodeImage(imageFile.readAsBytesSync());
     if (image == null) return [];
 
-    img.Image resizedImage = img.copyResizeCropSquare(image, size: 160);
+    img.Image resizedImage = img.copyResizeCropSquare(image, size: 112);
+
     Float32List input = _imageToFloat32(resizedImage);
 
+    // var input = buffer.reshape([1, 112, 112, 3]);
     var output = List.filled(_outputShape[1], 0.0).reshape([1, _outputShape[1]]);
-    _interpreter.run(input.reshape([1, 160, 160, 3]), output);
+    _interpreter.run(input.reshape([1, 112, 112, 3]), output);
+
+    // img.Image resizedImage = img.copyResizeCropSquare(image, size: 160);
+
+    // var output = List.filled(_outputShape[1], 0.0).reshape([1, _outputShape[1]]);
+    // _interpreter.run(input.reshape([1, 160, 160, 3]), output);
 
     return List<double>.from(output[0]);
   }
@@ -47,7 +54,7 @@ class FaceNetModel {
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
       if (!doc.exists || !doc.data()!.containsKey('faceEmbeddings')) {
-        print("No face data found for user.");
+        debugPrint("No face data found for user.");
         return false;
       }
       List<dynamic> storedEmbeddings = doc.get('faceEmbeddings');
@@ -55,16 +62,16 @@ class FaceNetModel {
       List<double> newEmbeddings = runFaceNet(capturedImage);
 
       if (newEmbeddings.isEmpty) {
-        print("No face detected in the image.");
+        debugPrint("No face detected in the image.");
         return false;
       }
 
       double similarity = cosineSimilarity(storedEmbeddingsList, newEmbeddings);
-      print("Face similarity score: $similarity");
+      debugPrint("Face similarity score: $similarity");
 
-      return similarity > 0.5;
+      return similarity > 0.6717;
     } catch (e) {
-      print("Error fetching face data: $e");
+      debugPrint("Error fetching face data: $e");
       return false;
     }
   }
@@ -80,10 +87,10 @@ class FaceNetModel {
   }
 
   Float32List _imageToFloat32(img.Image image) {
-    var buffer = Float32List(160 * 160 * 3);
+    var buffer = Float32List(112 * 112 * 3);
     int index = 0;
-    for (int y = 0; y < 160; y++) {
-      for (int x = 0; x < 160; x++) {
+    for (int y = 0; y < 112; y++) {
+      for (int x = 0; x < 112; x++) {
         final pixel = image.getPixelSafe(x, y);
         buffer[index++] = pixel.r / 255.0;
         buffer[index++] = pixel.g / 255.0;

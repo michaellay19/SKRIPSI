@@ -74,9 +74,8 @@ class AttendanceProvider with ChangeNotifier {
       };
 
       await _firestore.collection('users').doc(userId).collection('attendance').add(imageData);
-      print('Image data saved successfully to Firestore.');
     } catch (e) {
-      print('Error uploading image: $e');
+      debugPrint('Error uploading image: $e');
     }
   }
 
