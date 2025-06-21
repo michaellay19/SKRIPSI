@@ -10,8 +10,8 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:skripsi/pages/users/all_users_pages.dart';
 import 'package:skripsi/widgets/face_painter.dart';
-import 'package:skripsi/pages/users/home/home_page.dart';
 import 'package:skripsi/providers/attendance_provider.dart';
 import 'package:skripsi/services/facenet_model_mobile.dart'
     if (dart.library.html) 'package:skripsi/services/facenet_model_web.dart';
@@ -351,7 +351,7 @@ class CameraPageState extends State<CameraPage> {
 
     print("embeddings : $embeddings");
 
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AllPages()));
   }
 
   void processImage(File image) async {

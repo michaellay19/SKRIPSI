@@ -39,7 +39,7 @@ class _AdminSettingPageState extends State<AdminSettingPage> {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.schedule),
-            title: const Text("Shift Settings"),
+            title: const Text("Shift Configuration"),
             onTap: () => _showShiftDialog(context),
           ),
           const Divider(),

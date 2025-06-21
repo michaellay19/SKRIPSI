@@ -182,6 +182,12 @@ class _AdminRequestTimeOffPageState extends State<AdminRequestTimeOffPage> {
               return matchesName && matchesStatus && matchesDate;
             }).toList();
 
+            filtered.sort((a, b) {
+              DateTime aStart = (a["data"]["startDate"] as Timestamp).toDate();
+              DateTime bStart = (b["data"]["startDate"] as Timestamp).toDate();
+              return bStart.compareTo(aStart);
+            });
+
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: ConstrainedBox(

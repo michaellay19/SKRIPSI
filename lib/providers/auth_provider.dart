@@ -158,6 +158,7 @@ class MyAuthProvider with ChangeNotifier {
   }
 
   void _showSnackBar(BuildContext context, String message) {
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );

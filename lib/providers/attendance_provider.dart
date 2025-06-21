@@ -9,6 +9,15 @@ class AttendanceProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  Future<DateTime> getServerTime() async {
+    final doc =
+        await FirebaseFirestore.instance.collection('server_time').add({'timestamp': FieldValue.serverTimestamp()});
+    final snapshot = await doc.get();
+    await doc.delete();
+
+    return (snapshot['timestamp'] as Timestamp).toDate();
+  }
+
   Future<void> uploadImage(File image, String activityType) async {
     try {
       final User? currentUser = _auth.currentUser;
@@ -23,7 +32,7 @@ class AttendanceProvider with ChangeNotifier {
       await ref.putFile(image);
       final String downloadUrl = await ref.getDownloadURL();
 
-      final now = DateTime.now();
+      final now = await getServerTime();
 
       final shiftDoc = await _firestore.collection('admin').doc('shift').get();
       final shiftData = shiftDoc.data()!;
@@ -66,7 +75,7 @@ class AttendanceProvider with ChangeNotifier {
 
       Map<String, dynamic> imageData = {
         'url': downloadUrl,
-        'uploadedAt': Timestamp.now(),
+        'uploadedAt': Timestamp.fromDate(now),
         'userEmail': currentUser.email,
         'activityType': activityType,
         'late': isLate,
@@ -141,7 +150,7 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   Future<TimeOfDay?> getTodayShiftEndTime() async {
-    final now = DateTime.now();
+    final now = await getServerTime();
 
     final shiftDoc = await _firestore.collection('admin').doc('shift').get();
     final shiftData = shiftDoc.data();

@@ -13,6 +13,7 @@ class AdminProfilePage extends StatefulWidget {
 }
 
 class _AdminProfilePageState extends State<AdminProfilePage> {
+  final _formKey = GlobalKey<FormState>();
   bool isEditing = false;
   Uint8List? _selectedImage;
   TextEditingController nameController = TextEditingController();
@@ -35,6 +36,8 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
   }
 
   Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+  
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     await profileProvider.updateProfile(
       nameController.text,
@@ -67,28 +70,31 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 80,
-                backgroundColor: AppColors.background1,
-                backgroundImage: _selectedImage != null
-                    ? MemoryImage(_selectedImage!)
-                    : (profileProvider.profileImage.isNotEmpty ? NetworkImage(profileProvider.profileImage) : null),
-                child: (_selectedImage == null && profileProvider.profileImage.isEmpty)
-                    ? const Icon(Icons.person, size: 90, color: AppColors.text1)
-                    : null,
-              ),
-              const SizedBox(height: 20),
-              if (isEditing) ...[_buildImageButtons(profileProvider)],
-              const SizedBox(height: 20),
-              _buildProfileField("Full Name", nameController),
-              _buildProfileField("Email", emailController),
-              _buildProfileField("position", positionController),
-              const SizedBox(height: 20),
-              isEditing ? _buildEditModeButtons() : _buildEditButton(),
-            ],
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 80,
+                  backgroundColor: AppColors.background1,
+                  backgroundImage: _selectedImage != null
+                      ? MemoryImage(_selectedImage!)
+                      : (profileProvider.profileImage.isNotEmpty ? NetworkImage(profileProvider.profileImage) : null),
+                  child: (_selectedImage == null && profileProvider.profileImage.isEmpty)
+                      ? const Icon(Icons.person, size: 90, color: AppColors.text1)
+                      : null,
+                ),
+                const SizedBox(height: 20),
+                if (isEditing) ...[_buildImageButtons(profileProvider)],
+                const SizedBox(height: 20),
+                _buildProfileField("Full Name", nameController),
+                _buildProfileField("Email", emailController),
+                _buildProfileField("position", positionController),
+                const SizedBox(height: 20),
+                isEditing ? _buildEditModeButtons() : _buildEditButton(),
+              ],
+            ),
           ),
         ),
       ),
@@ -147,10 +153,19 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                 color: AppColors.text2,
               )),
           const SizedBox(height: 5),
-          TextField(
+          TextFormField(
             controller: controller,
             enabled: isEditing,
             inputFormatters: label == "Email" ? [LowerCaseTextFormatter()] : null,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return "$label is required";
+              }
+              if (label == "Email" && !RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$").hasMatch(value)) {
+                return "The email address is badly formatted";
+              }
+              return null;
+            },
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),

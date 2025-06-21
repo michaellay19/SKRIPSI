@@ -17,7 +17,7 @@ class FaceNetModel {
 
   Future<void> _loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('assets/mobilefacenet.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/facenet.tflite');
       _interpreter.allocateTensors();
       _inputShape = _interpreter.getInputTensor(0).shape;
       _outputShape = _interpreter.getOutputTensor(0).shape;

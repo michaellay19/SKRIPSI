@@ -123,9 +123,9 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
               key: formKey,
               child: Column(
                 children: [
-                  _buildField(controllers["name"]!, "Name", isRequired: true),
-                  _buildField(controllers["nik"]!, "NIK", isNik: true, isRequired: true, isNumeric: true),
-                  _buildField(controllers["email"]!, "Email", isRequired: true),
+                  _buildField(controllers["name"]!, "Name"),
+                  _buildField(controllers["nik"]!, "NIK", isNik: true, isNumeric: true),
+                  _buildField(controllers["email"]!, "Email"),
                   _buildGenderField(controllers["gender"]!, "Gender"),
                   _buildField(controllers["dob"]!, "Date of Birth", isDate: true),
                   _buildField(controllers["pob"]!, "Place of Birth"),
@@ -282,7 +282,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
       context: context,
       builder: (BuildContext context) {
         return ConfirmationDialog(
-          title: "Confirm Delete",
+          title: "Delete Employee",
           content: "Are you sure you want to delete ${employee.name}?",
           confirmText: "Delete",
           confirmTextColor: AppColors.text1,
@@ -457,7 +457,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
   }
 
   Widget _buildField(TextEditingController controller, String label,
-      {bool isNik = false, bool isDate = false, bool isRequired = false, isNumeric = false}) {
+      {bool isNik = false, bool isDate = false, isNumeric = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: TextFormField(
@@ -472,10 +472,13 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
         keyboardType: isNumeric ? TextInputType.numberWithOptions(decimal: true, signed: false) : null,
         inputFormatters: isNumeric ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))] : null,
         validator: (value) {
-          if (isRequired && (value == null || value.isEmpty)) {
+          if (label == "Email" && !RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$").hasMatch(value!)) {
+            return "The email address is badly formatted";
+          }
+          if (value == null || value.isEmpty) {
             return "$label is required";
           }
-          if (isNik && value!.length != 16) {
+          if (isNik && value.length != 16) {
             return "NIK must be exactly 16 digits.";
           }
           return null;

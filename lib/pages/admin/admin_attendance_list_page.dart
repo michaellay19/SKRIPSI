@@ -19,6 +19,7 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
   @override
   void initState() {
     super.initState();
+    searchController.addListener(() => setState(() {}));
     _fetchAttendanceData();
   }
 
@@ -58,6 +59,8 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
           "status": "Absent",
         };
 
+        bool hasApprovedLeave = false;
+
         for (var attendanceDoc in attendanceSnapshot.docs) {
           var data = attendanceDoc.data() as Map<String, dynamic>;
           String activityType = data["activityType"];
@@ -74,17 +77,41 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
               attendanceData["clockin"] = formattedDate;
               attendanceData["clockinPhoto"] = url;
               attendanceData["status"] = "Present";
+              attendanceData["late"] = data["late"] ?? false;
             } else if (activityType == "Clock Out") {
               attendanceData["clockout"] = formattedDate;
               attendanceData["clockoutPhoto"] = url;
             }
           }
         }
-        if (attendanceData["clockin"] != "-" || attendanceData["clockout"] != "-") {
-          tempAttendanceList.add(attendanceData);
+        QuerySnapshot leaveSnapshot = await FirebaseFirestore.instance
+            .collection("users")
+            .doc(uid)
+            .collection("leave_requests")
+            .where("status", isEqualTo: "Approved")
+            .get();
+
+        for (var leaveDoc in leaveSnapshot.docs) {
+          var leaveData = leaveDoc.data() as Map<String, dynamic>;
+
+          DateTime startDate = (leaveData["startDate"] as Timestamp).toDate();
+          DateTime endDate = (leaveData["endDate"] as Timestamp).toDate();
+
+          if (selectedDate.isAfter(startDate.subtract(const Duration(days: 1))) &&
+              selectedDate.isBefore(endDate.add(const Duration(days: 1)))) {
+            hasApprovedLeave = true;
+            break;
+          }
         }
+
+        if (attendanceData["clockin"] == "-" && attendanceData["clockout"] == "-" && hasApprovedLeave) {
+          attendanceData["status"] = "Time-off";
+        }
+
+        tempAttendanceList.add(attendanceData);
       }
 
+      tempAttendanceList.sort((a, b) => a["no"].compareTo(b["no"]));
       setState(() {
         attendanceList = tempAttendanceList;
         isLoading = false;
@@ -143,7 +170,6 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                onChanged: (value) => setState(() {}),
               ),
             ),
             const SizedBox(width: 10),
@@ -186,7 +212,14 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
               .map((entry) => DataRow(cells: [
                     DataCell(Text(entry["no"]!)),
                     DataCell(Text(entry["name"]!)),
-                    DataCell(Text(entry["clockin"]!)),
+                    DataCell(
+                      Text(
+                        entry["clockin"]!,
+                        style: TextStyle(
+                          color: entry["late"] == true ? Colors.red : Colors.black,
+                        ),
+                      ),
+                    ),
                     DataCell(Text(entry["clockout"]!)),
                     DataCell(_buildStatusBadge(entry["status"]!)),
                     DataCell(_buildViewPhotoButton(entry)),
@@ -198,7 +231,14 @@ class _AdminAttendanceListPageState extends State<AdminAttendanceListPage> {
   }
 
   Widget _buildStatusBadge(String status) {
-    Color bgColor = status == "Present" ? Colors.green : Colors.red;
+    Color bgColor;
+    if (status == "Present") {
+      bgColor = Colors.green;
+    } else if (status == "Time-off") {
+      bgColor = Colors.orange;
+    } else {
+      bgColor = Colors.red;
+    }
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
       decoration: BoxDecoration(

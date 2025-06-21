@@ -22,14 +22,17 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  DateTime selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  // DateTime selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime? selectedMonth;
   late GeofenceProvider geofenceProvider;
   bool _isGeofenceInitialized = false;
+  String? nowDate;
 
   @override
   void initState() {
     super.initState();
     _checkUserFaceData();
+    _loadServerDate();
   }
 
   @override
@@ -40,6 +43,16 @@ class _HomePageState extends State<HomePage> {
       geofenceProvider = Provider.of<GeofenceProvider>(context, listen: false);
       _isGeofenceInitialized = true;
     }
+  }
+
+  Future<void> _loadServerDate() async {
+    final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+    final serverTime = await attendanceProvider.getServerTime();
+    if (!mounted) return;
+    setState(() {
+      nowDate = serverTime.toFormattedString();
+      selectedMonth = DateTime(serverTime.year, serverTime.month);
+    });
   }
 
   void _checkUserFaceData() async {
@@ -89,9 +102,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
-
     final activitiesStream = attendanceProvider.fetchActivities();
-
+    
     return Scaffold(
       appBar: AppBar(
           toolbarHeight: 75,
@@ -99,199 +111,200 @@ class _HomePageState extends State<HomePage> {
           scrolledUnderElevation: 0,
           backgroundColor: AppColors.background2,
           title: HomeHeaderProfile()),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: StreamBuilder<List<Map<String, dynamic>>>(
-          stream: activitiesStream,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
+      body: (selectedMonth == null || nowDate == null)
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: activitiesStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
 
-            if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('An error occurred: ${snapshot.error}'),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => setState(() {}),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final activities = snapshot.data ?? [];
-            final nowDate = DateTime.now().toFormattedString();
-
-            final clockInActivity = activities.firstWhere(
-              (activity) => activity['activityType'] == 'Clock In' && activity['date'] == nowDate,
-              orElse: () => {'time': '-', 'late': false},
-            );
-            final clockOutActivity = activities.firstWhere(
-              (activity) => activity['activityType'] == 'Clock Out' && activity['date'] == nowDate,
-              orElse: () => {'time': '-'},
-            );
-
-            final clockInTime = clockInActivity['time'] ?? '-';
-            final clockOutTime = clockOutActivity['time'] ?? '-';
-            final isLateClockIn = clockInActivity['late'] == true;
-
-            final hasClockIn = activities.any((a) => a['activityType'] == 'Clock In' && a['date'] == nowDate);
-            final hasClockOut = activities.any((a) => a['activityType'] == 'Clock Out' && a['date'] == nowDate);
-
-            final lateCount = attendanceProvider.countMonthlyLates(activities, selectedMonth);
-
-            final selectedMonthActivities = activities.where((activity) {
-              try {
-                final date = DateFormat('dd-MM-yyyy').parseStrict(activity['date']);
-                return date.month == selectedMonth.month && date.year == selectedMonth.year;
-              } catch (e) {
-                return false;
-              }
-            }).toList();
-
-            final groupedActivities = attendanceProvider.groupActivitiesByDate(selectedMonthActivities);
-            final sortedKeys = groupedActivities.keys.toList()
-              ..sort((a, b) {
-                final aDate = DateTime.parse('${a.split('-')[2]}-${a.split('-')[1]}-${a.split('-')[0]}');
-                final bDate = DateTime.parse('${b.split('-')[2]}-${b.split('-')[1]}-${b.split('-')[0]}');
-                return bDate.compareTo(aDate);
-              });
-
-            return FutureBuilder<TimeOfDay?>(
-              future: attendanceProvider.getTodayShiftEndTime(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final shiftEnd = snapshot.data;
-                if (shiftEnd == null) {
-                  return const Center(child: Text('No shift end time available for today.'));
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TodayAttendanceSection(
-                      clockInTime: clockInTime,
-                      clockOutTime: clockOutTime,
-                      hasClockIn: hasClockIn,
-                      hasClockOut: hasClockOut,
-                      onClockPressed: _attemptClock,
-                      isLateClockIn: isLateClockIn,
-                      shiftEnd: shiftEnd,
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "Your Activity",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        MonthYearFilterDialog(
-                          months: List.generate(12, (i) => DateFormat.MMMM().format(DateTime(0, i + 1))),
-                          years: List.generate(10, (i) => (DateTime.now().year - i).toString()),
-                          selectedMonth: DateFormat.MMMM().format(selectedMonth),
-                          selectedYear: selectedMonth.year.toString(),
-                          onMonthChanged: (month) {
-                            final newMonth = DateFormat.MMMM().parse(month).month;
-                            setState(() {
-                              selectedMonth = DateTime(selectedMonth.year, newMonth);
-                            });
-                          },
-                          onYearChanged: (year) {
-                            setState(() {
-                              selectedMonth = DateTime(int.parse(year), selectedMonth.month);
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time, color: AppColors.cancel),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  "This Month Late",
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  "$lateCount times",
-                                  style: const TextStyle(fontSize: 14, color: Colors.black54),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: sortedKeys.length,
-                            itemBuilder: (context, index) {
-                              final date = sortedKeys[index];
-                              final items = groupedActivities[date]!;
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    date,
-                                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                                  ),
-                                  const Divider(thickness: 1),
-                                  ...items.map((activity) {
-                                    final imageUrl = activity['url'];
-                                    return ActivityTile(
-                                      title: activity['activityType'] ?? 'Unknown',
-                                      time: activity['time'],
-                                      date: activity['date'],
-                                      onTap: () {
-                                        if (imageUrl != null && imageUrl.isNotEmpty) {
-                                          _showImageDialog(context, imageUrl);
-                                        } else {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('No image available for this activity')),
-                                          );
-                                        }
-                                      },
-                                    );
-                                  }),
-                                  const SizedBox(height: 12),
-                                ],
-                              );
-                            },
+                          Text('An error occurred: ${snapshot.error}'),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => setState(() {}),
+                            child: const Text('Retry'),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        ),
-      ),
+                    );
+                  }
+
+                  final activities = snapshot.data ?? [];
+
+                  final clockInActivity = activities.firstWhere(
+                    (activity) => activity['activityType'] == 'Clock In' && activity['date'] == nowDate,
+                    orElse: () => {'time': '-', 'late': false},
+                  );
+                  final clockOutActivity = activities.firstWhere(
+                    (activity) => activity['activityType'] == 'Clock Out' && activity['date'] == nowDate,
+                    orElse: () => {'time': '-'},
+                  );
+
+                  final clockInTime = clockInActivity['time'] ?? '-';
+                  final clockOutTime = clockOutActivity['time'] ?? '-';
+                  final isLateClockIn = clockInActivity['late'] == true;
+
+                  final hasClockIn = activities.any((a) => a['activityType'] == 'Clock In' && a['date'] == nowDate);
+                  final hasClockOut = activities.any((a) => a['activityType'] == 'Clock Out' && a['date'] == nowDate);
+
+                  final lateCount = attendanceProvider.countMonthlyLates(activities, selectedMonth!);
+
+                  final selectedMonthActivities = activities.where((activity) {
+                    try {
+                      final date = DateFormat('dd-MM-yyyy').parseStrict(activity['date']);
+                      return date.month == selectedMonth!.month && date.year == selectedMonth!.year;
+                    } catch (e) {
+                      return false;
+                    }
+                  }).toList();
+
+                  final groupedActivities = attendanceProvider.groupActivitiesByDate(selectedMonthActivities);
+                  final sortedKeys = groupedActivities.keys.toList()
+                    ..sort((a, b) {
+                      final aDate = DateTime.parse('${a.split('-')[2]}-${a.split('-')[1]}-${a.split('-')[0]}');
+                      final bDate = DateTime.parse('${b.split('-')[2]}-${b.split('-')[1]}-${b.split('-')[0]}');
+                      return bDate.compareTo(aDate);
+                    });
+
+                  return FutureBuilder<TimeOfDay?>(
+                    future: attendanceProvider.getTodayShiftEndTime(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final shiftEnd = snapshot.data;
+                      if (shiftEnd == null) {
+                        return const Center(child: Text('No shift end time available for today.'));
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TodayAttendanceSection(
+                            clockInTime: clockInTime,
+                            clockOutTime: clockOutTime,
+                            hasClockIn: hasClockIn,
+                            hasClockOut: hasClockOut,
+                            onClockPressed: _attemptClock,
+                            isLateClockIn: isLateClockIn,
+                            shiftEnd: shiftEnd,
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "Your Activity",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              MonthYearFilterDialog(
+                                months: List.generate(12, (i) => DateFormat.MMMM().format(DateTime(0, i + 1))),
+                                years: List.generate(10, (i) => (DateTime.now().year - i).toString()),
+                                selectedMonth: DateFormat.MMMM().format(selectedMonth!),
+                                selectedYear: selectedMonth!.year.toString(),
+                                onMonthChanged: (month) {
+                                  final newMonth = DateFormat.MMMM().parse(month).month;
+                                  setState(() {
+                                    selectedMonth = DateTime(selectedMonth!.year, newMonth);
+                                  });
+                                },
+                                onYearChanged: (year) {
+                                  setState(() {
+                                    selectedMonth = DateTime(int.parse(year), selectedMonth!.month);
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          Card(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.access_time, color: AppColors.cancel),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "This Month Late",
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        "$lateCount times",
+                                        style: const TextStyle(fontSize: 14, color: Colors.black54),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ListView(
+                              children: [
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: sortedKeys.length,
+                                  itemBuilder: (context, index) {
+                                    final date = sortedKeys[index];
+                                    final items = groupedActivities[date]!;
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          date,
+                                          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                                        ),
+                                        const Divider(thickness: 1),
+                                        ...items.map((activity) {
+                                          final imageUrl = activity['url'];
+                                          return ActivityTile(
+                                            title: activity['activityType'] ?? 'Unknown',
+                                            time: activity['time'],
+                                            date: activity['date'],
+                                            onTap: () {
+                                              if (imageUrl != null && imageUrl.isNotEmpty) {
+                                                _showImageDialog(context, imageUrl);
+                                              } else {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('No image available for this activity')),
+                                                );
+                                              }
+                                            },
+                                          );
+                                        }),
+                                        const SizedBox(height: 12),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
     );
   }
 }
