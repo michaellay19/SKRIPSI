@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:skripsi/constants/app_colors.dart';
 
@@ -75,48 +76,52 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                 ),
               ),
               const SizedBox(height: 30),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.text1,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _emailController,
-                        decoration: InputDecoration(
-                          labelText: "Email",
-                          errorText: _errorMessage,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+              LayoutBuilder(builder: (context, constraints) {
+                double screenWidth = MediaQuery.of(context).size.width;
+                double horizontalPadding = screenWidth * 0.3;
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: kIsWeb ? horizontalPadding : 30.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.text1,
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _emailController,
+                          decoration: InputDecoration(
+                            labelText: "Email",
+                            errorText: _errorMessage,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 15),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+                          keyboardType: TextInputType.emailAddress,
                         ),
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _resetPassword,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: _resetPassword,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            "Send Reset Link",
+                            style: TextStyle(color: AppColors.text1, fontSize: 18),
                           ),
                         ),
-                        child: const Text(
-                          "Send Reset Link",
-                          style: TextStyle(color: AppColors.text1, fontSize: 18),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              }),
               const SizedBox(height: 20),
               TextButton(
                 onPressed: () {
