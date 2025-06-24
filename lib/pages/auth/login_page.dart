@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skripsi/constants/app_colors.dart';
@@ -52,73 +53,77 @@ class LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.background2,
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          TextFormField(
-                            controller: emailController,
-                            decoration: InputDecoration(
-                              labelText: "Email",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 15),
-                            ),
-                            onFieldSubmitted: (_) => _submitLogin(),
-                          ),
-                          const SizedBox(height: 15),
-                          TextFormField(
-                            controller: passwordController,
-                            obscureText: !passwordVisible,
-                            decoration: InputDecoration(
-                              labelText: "Password",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 15),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  passwordVisible ? Icons.visibility : Icons.visibility_off,
+                LayoutBuilder(builder: (context, constraints) {
+                  double screenWidth = MediaQuery.of(context).size.width;
+                  double horizontalPadding = screenWidth * 0.3;
+                  return Padding(
+                    padding: EdgeInsets.symmetric(horizontal: kIsWeb ? horizontalPadding : 30),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.background2,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              controller: emailController,
+                              decoration: InputDecoration(
+                                labelText: "Email",
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    passwordVisible = !passwordVisible;
-                                  });
-                                },
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+                              ),
+                              onFieldSubmitted: (_) => _submitLogin(),
+                            ),
+                            const SizedBox(height: 15),
+                            TextFormField(
+                              controller: passwordController,
+                              obscureText: !passwordVisible,
+                              decoration: InputDecoration(
+                                labelText: "Password",
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    passwordVisible ? Icons.visibility : Icons.visibility_off,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      passwordVisible = !passwordVisible;
+                                    });
+                                  },
+                                ),
+                              ),
+                              onFieldSubmitted: (_) => _submitLogin(),
+                            ),
+                            const SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: _submitLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                "Login",
+                                style: TextStyle(color: AppColors.text1, fontSize: 18),
                               ),
                             ),
-                            onFieldSubmitted: (_) => _submitLogin(),
-                          ),
-                          const SizedBox(height: 10),
-                          ElevatedButton(
-                            onPressed: _submitLogin,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              "Login",
-                              style: TextStyle(color: AppColors.text1, fontSize: 18),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                }),
                 const SizedBox(height: 15),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
