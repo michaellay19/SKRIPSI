@@ -35,14 +35,8 @@ class FaceNetModel {
 
     Float32List input = _imageToFloat32(resizedImage);
 
-    // var input = buffer.reshape([1, 112, 112, 3]);
     var output = List.filled(_outputShape[1], 0.0).reshape([1, _outputShape[1]]);
     _interpreter.run(input.reshape([1, 112, 112, 3]), output);
-
-    // img.Image resizedImage = img.copyResizeCropSquare(image, size: 160);
-
-    // var output = List.filled(_outputShape[1], 0.0).reshape([1, _outputShape[1]]);
-    // _interpreter.run(input.reshape([1, 160, 160, 3]), output);
 
     return List<double>.from(output[0]);
   }
@@ -69,7 +63,7 @@ class FaceNetModel {
       double similarity = cosineSimilarity(storedEmbeddingsList, newEmbeddings);
       debugPrint("Face similarity score: $similarity");
 
-      return similarity > 0.6717;
+      return similarity > 0.5;
     } catch (e) {
       debugPrint("Error fetching face data: $e");
       return false;

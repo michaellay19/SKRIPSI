@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:skripsi/services/mock_location_checker_service.dart';
 
 class GeofenceProvider extends ChangeNotifier {
   double? latitude;
@@ -49,6 +50,14 @@ class GeofenceProvider extends ChangeNotifier {
     if (permission == LocationPermission.deniedForever) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Location permission permanently denied.')),
+      );
+      return false;
+    }
+
+    final isMock = await MockLocationChecker.isLocationMocked();
+    if (isMock) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fake GPS detected. Please disable mock location.')),
       );
       return false;
     }
