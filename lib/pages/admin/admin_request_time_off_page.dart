@@ -78,9 +78,16 @@ class _AdminRequestTimeOffPageState extends State<AdminRequestTimeOffPage> {
         children: [
           _buildFilterSection(),
           const SizedBox(height: 10),
-          Expanded(child: _buildDataTable()),
+          Expanded(child: _buildScrollableDataTable()),
         ],
       ),
+    );
+  }
+
+  Widget _buildScrollableDataTable() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: _buildDataTable(),
     );
   }
 

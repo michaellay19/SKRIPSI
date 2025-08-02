@@ -124,7 +124,20 @@ class _RequestPageState extends State<RequestPage> {
                         }
 
                         final summary = summarySnapshot.data!;
-                        return LeaveSummaryCard(summary: summary);
+                        return Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          child: ExpansionTile(
+                            initiallyExpanded: false,
+                            title: const Text(
+                              'Leave Summary',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            children: [
+                              LeaveSummaryCard(summary: summary),
+                            ],
+                          ),
+                        );
                       },
                     );
                   },

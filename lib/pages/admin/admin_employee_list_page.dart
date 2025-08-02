@@ -340,7 +340,7 @@ class _AdminEmployeeListPageState extends State<AdminEmployeeListPage> {
           title: Text("${employee.name}'s Leave Summary"),
           content: SizedBox(
             width: 300,
-            height: 200,
+            height: 280,
             child: LeaveSummaryCard(summary: summary),
           ),
           actions: [

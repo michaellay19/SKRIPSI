@@ -16,24 +16,39 @@ class LeaveService {
     int approved = 0;
     int pending = 0;
     int rejected = 0;
-    int attendanceRequests = 0;
     int annualLeaveUsedDays = 0;
+
+    int annualRequests = 0;
+    int sickRequests = 0;
+    int parentalRequests = 0;
+    int attendanceRequests = 0;
 
     for (var request in requests) {
       final days = HolidayUtils.getWorkingDaysBetween(request.startDate, request.endDate);
-
       total++;
 
-      if (request.leaveType == 'Attendance Request') {
-        attendanceRequests++;
-      }
-
-      switch (request.status.toLowerCase()) {
-        case 'approved':
-          approved++;
-          if (request.leaveType == 'Annual Leave') {
+      switch (request.leaveType.toLowerCase()) {
+        case 'annual leave':
+          annualRequests++;
+          if (request.status.toLowerCase() == 'approved') {
             annualLeaveUsedDays += days;
           }
+          break;
+        case 'sick leave':
+          sickRequests++;
+          break;
+        case 'parental leave':
+          parentalRequests++;
+          break;
+        case 'attendance request':
+          attendanceRequests++;
+          break;
+      }
+
+      final status = request.status.toLowerCase();
+      switch (status) {
+        case 'approved':
+          approved++;
           break;
         case 'pending':
           pending++;
@@ -48,6 +63,9 @@ class LeaveService {
 
     return {
       'total': total,
+      'annualRequests': annualRequests,
+      'sickRequests': sickRequests,
+      'parentalRequests': parentalRequests,
       'attendanceRequests': attendanceRequests,
       'approved': approved,
       'pending': pending,

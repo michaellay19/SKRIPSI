@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class LeaveSummaryCard extends StatelessWidget {
@@ -15,13 +16,18 @@ class LeaveSummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Leave Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
+            if (kIsWeb) Text('Leave Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            if (kIsWeb) SizedBox(height: 10),
             Text('Total Requests: ${summary['total']}'),
+            Text('Annual Requests: ${summary['annualRequests']}'),
+            Text('Sick Requests: ${summary['sickRequests']}'),
+            Text('Parental Requests: ${summary['parentalRequests']}'),
             Text('Attendance Requests: ${summary['attendanceRequests']}'),
+            const SizedBox(height: 10),
             Text('Approved: ${summary['approved']}'),
             Text('Pending: ${summary['pending']}'),
             Text('Rejected: ${summary['rejected']}'),
+            const SizedBox(height: 10),
             Text('Annual Leave Quota Left: ${summary['quotaLeft']} days'),
           ],
         ),
